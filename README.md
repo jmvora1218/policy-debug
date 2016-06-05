@@ -1,7 +1,7 @@
 # policy-debug
 
-These debug scripts will debug the relevant processes for which they are named after.
-The scripts will also gather basic information from the server (disk space, free memory, running processes, hotfixes, etc.)
+These debug scripts will debug the relevant processes for which they are named after.<br />
+The scripts will also gather basic information from the server (disk space, free memory, running processes, hotfixes, etc.)<br />
 All the relevant debug files and information will be compressed into a tgz file.
 
 
