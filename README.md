@@ -5,7 +5,7 @@ The scripts will also gather basic information from the server (disk space, free
 All the relevant debug files and information will be compressed into a tgz file.
 
 
-# instructions
+# Instructions
 
 1. Install policy from Dashboard and verify the error is seen.
 2. Upload debug script tar file to a temporary directory.
