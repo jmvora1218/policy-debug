@@ -6,16 +6,14 @@ All the relevant debug files and information will be compressed into a tgz file.
 
 
 # instructions
-policy_gw
-policy_mgmt
 
 1. Install policy from Dashboard and verify the error is seen.
 2. Upload debug script tar file to a temporary directory.
 
-3. Extract the script.
+3. Extract the script.<br />
   tar xvf SCRIPT_NAME.tar
 
-4. Run the script.
+4. Run the script.<br />
   ./SCRIPT_NAME
 
 5. Answer the questions if asked.
