@@ -16,6 +16,8 @@ All the relevant debug files and information will be compressed into a tgz file.
 4. Run the script.<br />
   ./SCRIPT_NAME
 
+  Note - Do NOT install policy from Dashboard while the debug is running.
+
 5. Answer the questions if asked.
 6. The script will stop automatically when it is finished.
 7. Upload the compressed file using Check Point Uploader on sk108152.
