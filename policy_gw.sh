@@ -18,7 +18,8 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 2.8 June 13, 2016
+Version 2.8 July 20, 2016
+Contribute at <https://github.com/seiruss/policy-debug>
 "
 
 HELP_LICENSE="
@@ -163,7 +164,7 @@ else
         else
             rm -rf "$DBGDIR_FILES"
             mkdir -p "$DBGDIR_FILES"
-        fi        
+        fi
     fi
 fi
 

@@ -17,7 +17,8 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8 June 13, 2016
+Version 2.8 July 20, 2016
+Contribute at <https://github.com/seiruss/policy-debug>
 "
 
 HELP_LICENSE="
@@ -141,7 +142,7 @@ else
         else
             rm -rf "$DBGDIR_FILES"
             mkdir -p "$DBGDIR_FILES"
-        fi        
+        fi
     fi
 fi
 
@@ -613,7 +614,7 @@ if [[ "$QUESTION" == "5" ]]; then
         rm $FWDIR/log/fwm.elg.* 2> /dev/null
         echo "=debug_start=" > $FWDIR/log/fwm.elg
         fw debug fwm on TDERROR_ALL_ALL=5
-    
+
         # START GLOBAL REASSIGN DEBUG
         mdsenv
         echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d mds fwmconnect -assign -n 10 -g ##$GLOBAL_POLICY_NAME -l ${CMA_NAME}_._._${DOMAIN_NAME} &> global_policy_assign_debug.txt" >> "$SESSION_LOG"
@@ -621,11 +622,11 @@ if [[ "$QUESTION" == "5" ]]; then
         export TDERROR_ALL_ALL=5
         fwm -d mds fwmconnect -assign -n 10 -g "##$GLOBAL_POLICY_NAME" -l "${CMA_NAME}_._._${DOMAIN_NAME}" &> "$DBGDIR_FILES"/global_policy_assign_debug.txt &
         progress_bar
-    
+
         # STOP GLOBAL REASSIGN DEBUG
         unset TDERROR_ALL_ALL
         cp -p $MDSDIR/conf/mdsdb/customers.C* "$DBGDIR_FILES"
-    
+
         # STOP CMA DEBUG
         mdsenv "$CMA_NAME"
         fw debug fwm off TDERROR_ALL_ALL=0
