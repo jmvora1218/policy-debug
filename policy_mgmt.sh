@@ -17,7 +17,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8 July 20, 2016
+Version 2.8.1 July 25, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -209,20 +209,23 @@ if [[ -d "$MDSDIR" ]]; then
     CMA_ARRAY_NUMBER_OPTION=$(printf '%s\n' "${CMA_ARRAY[@]}" | wc -l)
     CMA_ARRAY_LIST=0
     while [[ "$CMA_ARRAY_NUMBER" > "0" ]]; do
-        let CMA_ARRAY_LIST=CMA_ARRAY_LIST+1
+        let "CMA_ARRAY_LIST += 1"
         echo "${CMA_ARRAY_LIST}. ${CMA_ARRAY[$((CMA_ARRAY_LIST-1))]}"
-        let CMA_ARRAY_NUMBER=CMA_ARRAY_NUMBER-1
+        let "CMA_ARRAY_NUMBER -= 1"
     done
     while true; do
         echo -e "\\nWhat is the number of the Domain you want to debug?"
         echo -n "(1-${CMA_ARRAY_NUMBER_OPTION}): "
         read CMA_NUMBER
-        if [[ "$CMA_NUMBER" > "0" ]]; then
-            CMA_NAME="${CMA_ARRAY[$((CMA_NUMBER-1))]}"
-            CMA_NAME_EXIST=$($MDSVERUTIL AllCMAs | grep ^"$CMA_NAME"$)
-        else
-            CMA_NAME=""
-        fi
+        case "$CMA_NUMBER" in
+            [1-32768])
+                CMA_NAME="${CMA_ARRAY[$((CMA_NUMBER-1))]}"
+                CMA_NAME_EXIST=$($MDSVERUTIL AllCMAs | grep ^"$CMA_NAME"$)
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Domain\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
         case "$CMA_NAME" in
             "")
                 echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Domain\\nPress CTRL-C to exit the script if needed"
@@ -330,24 +333,27 @@ policy_detect()
     POLICY_ARRAY_NUMBER_OPTION="$POLICY_ARRAY_NUMBER"
     POLICY_ARRAY_LIST=0
     while [[ "$POLICY_ARRAY_NUMBER" > "0" ]]; do
-        let POLICY_ARRAY_LIST=POLICY_ARRAY_LIST+1
+        let "POLICY_ARRAY_LIST += 1"
         echo "${POLICY_ARRAY_LIST}. ${POLICY_ARRAY[$((POLICY_ARRAY_LIST-1))]}"
-        let POLICY_ARRAY_NUMBER=POLICY_ARRAY_NUMBER-1
+        let "POLICY_ARRAY_NUMBER -= 1"
     done
     while true; do
         echo -e "\\nWhat is the number of the Policy you want to debug?"
         echo -n "(1-${POLICY_ARRAY_NUMBER_OPTION}): "
         read POLICY_NUMBER
-        if [[ "$POLICY_NUMBER" > "0" ]]; then
-            POLICY_NAME="${POLICY_ARRAY[$((POLICY_NUMBER-1))]}"
-            if [[ -d "$MDSDIR" ]]; then
-                POLICY_NAME_EXIST=$(echo -e "$CMA_IP\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
-            else
-                POLICY_NAME_EXIST=$(echo -e "localhost\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
-            fi
-        else
-            POLICY_NAME=""
-        fi
+        case "$POLICY_NUMBER" in
+            [1-32768])
+                POLICY_NAME="${POLICY_ARRAY[$((POLICY_NUMBER-1))]}"
+                if [[ -d "$MDSDIR" ]]; then
+                    POLICY_NAME_EXIST=$(echo -e "$CMA_IP\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
+                else
+                    POLICY_NAME_EXIST=$(echo -e "localhost\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Policy\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
         case "$POLICY_NAME" in
             "")
                 echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Policy\\nPress CTRL-C to exit the script if needed"
@@ -373,20 +379,23 @@ global_policy_detect()
     GLOBAL_POLICY_ARRAY_NUMBER_OPTION="$GLOBAL_POLICY_NUMBER"
     GLOBAL_POLICY_ARRAY_LIST=0
     while [[ "$GLOBAL_POLICY_ARRAY_NUMBER" > "0" ]]; do
-        let GLOBAL_POLICY_ARRAY_LIST=GLOBAL_POLICY_ARRAY_LIST+1
+        let "GLOBAL_POLICY_ARRAY_LIST += 1"
         echo "${GLOBAL_POLICY_ARRAY_LIST}. ${GLOBAL_POLICY_ARRAY[$((GLOBAL_POLICY_ARRAY_LIST-1))]}"
-        let GLOBAL_POLICY_ARRAY_NUMBER=GLOBAL_POLICY_ARRAY_NUMBER-1
+        let "GLOBAL_POLICY_ARRAY_NUMBER -= 1"
     done
     while true; do
         echo -e "\\nWhat is the name of the Global Policy you want to debug?"
         echo -n "(1-${GLOBAL_POLICY_ARRAY_NUMBER_OPTION}): "
         read GLOBAL_POLICY_NUMBER
-        if [[ "$GLOBAL_POLICY_NUMBER" > "0" ]]; then
-            GLOBAL_POLICY_NAME="${GLOBAL_POLICY_ARRAY[$((GLOBAL_POLICY_NUMBER-1))]}"
-            GLOBAL_POLICY_NAME_EXIST=$(cpmiquerybin attr "" policies_collections "" -a __name__ | grep -v "No Global Policy" | sed 's/[[:blank:]]*$//' | grep ^"$GLOBAL_POLICY_NAME"$)
-        else
-            GLOBAL_POLICY_NAME=""
-        fi
+        case "$GLOBAL_POLICY_NUMBER" in
+            [1-32768])
+                GLOBAL_POLICY_NAME="${GLOBAL_POLICY_ARRAY[$((GLOBAL_POLICY_NUMBER-1))]}"
+                GLOBAL_POLICY_NAME_EXIST=$(cpmiquerybin attr "" policies_collections "" -a __name__ | grep -v "No Global Policy" | sed 's/[[:blank:]]*$//' | grep ^"$GLOBAL_POLICY_NAME"$)
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Global Policy\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
         case "$GLOBAL_POLICY_NAME" in
             "")
                 echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Global Policy\\nPress CTRL-C to exit the script if needed"
@@ -415,24 +424,27 @@ mgmt_detect()
     MGMT_ARRAY_NUMBER_OPTION="$MGMT_ARRAY_NUMBER"
     MGMT_ARRAY_LIST=0
     while [[ "$MGMT_ARRAY_NUMBER" > "0" ]]; do
-        let MGMT_ARRAY_LIST=MGMT_ARRAY_LIST+1
+        let "MGMT_ARRAY_LIST += 1"
         echo "${MGMT_ARRAY_LIST}. ${MGMT_ARRAY[$((MGMT_ARRAY_LIST-1))]}"
-        let MGMT_ARRAY_NUMBER=MGMT_ARRAY_NUMBER-1
+        let "MGMT_ARRAY_NUMBER -= 1"
     done
     while true; do
         echo -e "\\nWhat is the name of the Management you want to Install Database to?"
         echo -n "(1-${MGMT_ARRAY_NUMBER_OPTION}): "
         read MGMT_NUMBER
-        if [[ "$MGMT_NUMBER" > "0" ]]; then
-            MGMT_NAME="${MGMT_ARRAY[$((MGMT_NUMBER-1))]}"
-            if [[ -d "$MDSDIR" ]]; then
-                MGMT_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
-            else
-                MGMT_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
-            fi
-        else
-            MGMT_NAME=""
-        fi
+        case "$MGMT_NUMBER" in
+            [1-32768])
+                MGMT_NAME="${MGMT_ARRAY[$((MGMT_NUMBER-1))]}"
+                if [[ -d "$MDSDIR" ]]; then
+                    MGMT_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
+                else
+                    MGMT_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Management\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
         case "$MGMT_NAME" in
             "")
                 echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Management\\nPress CTRL-C to exit the script if needed"
@@ -461,24 +473,27 @@ gateway_detect()
     GATEWAY_ARRAY_NUMBER_OPTION="$GATEWAY_ARRAY_NUMBER"
     GATEWAY_ARRAY_LIST=0
     while [[ "$GATEWAY_ARRAY_NUMBER" > "0" ]]; do
-        let GATEWAY_ARRAY_LIST=GATEWAY_ARRAY_LIST+1
+        let "GATEWAY_ARRAY_LIST += 1"
         echo "${GATEWAY_ARRAY_LIST}. ${GATEWAY_ARRAY[$((GATEWAY_ARRAY_LIST-1))]}"
-        let GATEWAY_ARRAY_NUMBER=GATEWAY_ARRAY_NUMBER-1
+        let "GATEWAY_ARRAY_NUMBER -= 1"
     done
     while true; do
         echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
         echo -n "(1-${GATEWAY_ARRAY_NUMBER_OPTION}): "
         read GATEWAY_NUMBER
-        if [[ "$GATEWAY_NUMBER" > "0" ]]; then
-            GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
-            if [[ -d "$MDSDIR" ]]; then
-                GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
-            else
-                GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
-            fi
-        else
-            GATEWAY_NAME=""
-        fi
+        case "$GATEWAY_NUMBER" in
+            [1-32768])
+                GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
+                if [[ -d "$MDSDIR" ]]; then
+                    GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
+                else
+                    GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
         case "$GATEWAY_NAME" in
             "")
                 echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
