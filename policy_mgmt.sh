@@ -218,7 +218,7 @@ if [[ -d "$MDSDIR" ]]; then
         echo -n "(1-${CMA_ARRAY_NUMBER_OPTION}): "
         read CMA_NUMBER
         case "$CMA_NUMBER" in
-            [1-32768])
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 CMA_NAME="${CMA_ARRAY[$((CMA_NUMBER-1))]}"
                 CMA_NAME_EXIST=$($MDSVERUTIL AllCMAs | grep ^"$CMA_NAME"$)
                 ;;
@@ -342,7 +342,7 @@ policy_detect()
         echo -n "(1-${POLICY_ARRAY_NUMBER_OPTION}): "
         read POLICY_NUMBER
         case "$POLICY_NUMBER" in
-            [1-32768])
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 POLICY_NAME="${POLICY_ARRAY[$((POLICY_NUMBER-1))]}"
                 if [[ -d "$MDSDIR" ]]; then
                     POLICY_NAME_EXIST=$(echo -e "$CMA_IP\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
@@ -388,7 +388,7 @@ global_policy_detect()
         echo -n "(1-${GLOBAL_POLICY_ARRAY_NUMBER_OPTION}): "
         read GLOBAL_POLICY_NUMBER
         case "$GLOBAL_POLICY_NUMBER" in
-            [1-32768])
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 GLOBAL_POLICY_NAME="${GLOBAL_POLICY_ARRAY[$((GLOBAL_POLICY_NUMBER-1))]}"
                 GLOBAL_POLICY_NAME_EXIST=$(cpmiquerybin attr "" policies_collections "" -a __name__ | grep -v "No Global Policy" | sed 's/[[:blank:]]*$//' | grep ^"$GLOBAL_POLICY_NAME"$)
                 ;;
@@ -433,7 +433,7 @@ mgmt_detect()
         echo -n "(1-${MGMT_ARRAY_NUMBER_OPTION}): "
         read MGMT_NUMBER
         case "$MGMT_NUMBER" in
-            [1-32768])
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 MGMT_NAME="${MGMT_ARRAY[$((MGMT_NUMBER-1))]}"
                 if [[ -d "$MDSDIR" ]]; then
                     MGMT_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
@@ -482,7 +482,7 @@ gateway_detect()
         echo -n "(1-${GATEWAY_ARRAY_NUMBER_OPTION}): "
         read GATEWAY_NUMBER
         case "$GATEWAY_NUMBER" in
-            [1-32768])
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
                 if [[ -d "$MDSDIR" ]]; then
                     GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
