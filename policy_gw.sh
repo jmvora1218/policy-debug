@@ -18,7 +18,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 2.8 July 20, 2016
+Version 2.8.1 August 19, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -128,6 +128,7 @@ fi
 SCRIPTNAME=($(basename $0))
 FILES="$SCRIPTNAME"_files.$$
 ISVSX=$($CPDIR/bin/cpprod_util FwIsVSX 2> /dev/null)
+IS61K=$($CPDIR/bin/cpprod_util CPPROD_GetValue ASG_CHASSIS ChassisID 1 2> /dev/null)
 
 ###############################################################################
 # CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
@@ -217,19 +218,39 @@ echo -e "$HELP_VERSION\\nScript Started at $START_DATE" >> "$SESSION_LOG"
 [[ "$MORE_DEBUG_FLAGS" == "1" ]] && echo -e "\\nInfo: More kernel debug flags is enabled" | tee -a "$SESSION_LOG"
 
 ###############################################################################
+# VERIFY 61K/41K CHASSIS AND BLADE
+###############################################################################
+if [[ "$IS61K" != "Failed to find the value" ]]; then
+    BLADEID=$($CPDIR/bin/cpprod_util CPPROD_GetValue ASG_CHASSIS BladeID 1)
+    echo -e "\\nThis is a 61k/41k Gateway on Chassis $IS61K Blade $BLADEID" | tee -a "$SESSION_LOG"
+    read -p "Do you want to run this debug on Chassis $IS61K Blade $BLADEID? (y/n) [n]? " CORRECT_61K
+        case "$CORRECT_61K" in
+            [yY][eE][sS]|[yY])
+                echo "Chassis: $IS61K Blade: $BLADEID"
+                echo "Using Chassis $IS61K Blade $BLADEID" >> "$SESSION_LOG"
+                ;;
+            *)
+                echo -e "Please change to the correct Chassis and Blade and run the script again\\n"
+                clean_up
+                exit 1
+                ;;
+        esac
+fi
+
+###############################################################################
 # VERIFY VSX CONTEXT
 ###############################################################################
 if [[ "$ISVSX" == *"1"* ]]; then
     VSID_SCRIPT=$(cat /proc/self/vrf)
     echo -e "\\nThis is a VSX Gateway" | tee -a "$SESSION_LOG"
-    read -p "Is VS$VSID_SCRIPT the correct Virtual System you want to debug? (y/n) [n]? " CORRECT_VS
+    read -p "Do you want to run this debug on VS $VSID_SCRIPT? (y/n) [n]? " CORRECT_VS
         case "$CORRECT_VS" in
             [yY][eE][sS]|[yY])
-                echo "Virtual System: VS${VSID_SCRIPT}"
-                echo "Using VS$VSID_SCRIPT" >> "$SESSION_LOG"
+                echo "Virtual System: VS ${VSID_SCRIPT}"
+                echo "Using VS $VSID_SCRIPT" >> "$SESSION_LOG"
                 ;;
             *)
-                echo -e "Please change the context to the correct Virtual System and run the script again\\n"
+                echo -e "Please change to the correct Virtual System and run the script again\\n"
                 clean_up
                 exit 1
                 ;;
@@ -293,8 +314,14 @@ fi
 ###############################################################################
 # START DEBUG
 ###############################################################################
-if [[ "$ISVSX" == *"1"* ]]; then
-    echo -e "\\nStarting debug on VS${VSID_SCRIPT}..." | tee -a "$SESSION_LOG"
+if [[ "$IS61K" != "Failed to find the value" ]]; then
+    if [[ "$ISVSX" == *"1"* ]]; then
+        echo -e "\\nStarting debug on Chassis $IS61K Blade $BLADEID VS ${VSID_SCRIPT}..." | tee -a "$SESSION_LOG"
+    else
+        echo -e "\\nStarting debug on Chassis $IS61K Blade $BLADEID..." | tee -a "$SESSION_LOG"
+    fi
+elif [[ "$ISVSX" == *"1"* ]]; then
+    echo -e "\\nStarting debug on VS ${VSID_SCRIPT}..." | tee -a "$SESSION_LOG"
 else
     echo -e "\\nStarting debug..." | tee -a "$SESSION_LOG"
 fi
