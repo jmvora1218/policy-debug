@@ -17,7 +17,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8.1 July 25, 2016
+Version 2.8.2 September 1, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -205,8 +205,8 @@ echo -e "$HELP_VERSION\\nScript Started at $START_DATE" >> "$SESSION_LOG"
 if [[ -d "$MDSDIR" ]]; then
     echo -e "\\nThis is a Multi-Domain Management Server\\n\\n--------DOMAINS DETECTED--------" | tee -a "$SESSION_LOG"
     CMA_ARRAY=($($MDSVERUTIL AllCMAs | sort | tee -a "$SESSION_LOG"))
-    CMA_ARRAY_NUMBER=$(printf '%s\n' "${CMA_ARRAY[@]}" | wc -l)
-    CMA_ARRAY_NUMBER_OPTION=$(printf '%s\n' "${CMA_ARRAY[@]}" | wc -l)
+    CMA_ARRAY_NUMBER=$(printf '%s\n' "${CMA_ARRAY[@]}" | wc -l | awk '{ print $1 }')
+    CMA_ARRAY_NUMBER_OPTION="$CMA_ARRAY_NUMBER"
     CMA_ARRAY_LIST=0
     while [[ "$CMA_ARRAY_NUMBER" > "0" ]]; do
         let "CMA_ARRAY_LIST += 1"
@@ -329,7 +329,7 @@ policy_detect()
         clean_up
         exit 1
     fi
-    POLICY_ARRAY_NUMBER=$(printf '%s\n' "${POLICY_ARRAY[@]}" | wc -l)
+    POLICY_ARRAY_NUMBER=$(printf '%s\n' "${POLICY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     POLICY_ARRAY_NUMBER_OPTION="$POLICY_ARRAY_NUMBER"
     POLICY_ARRAY_LIST=0
     while [[ "$POLICY_ARRAY_NUMBER" > "0" ]]; do
@@ -375,7 +375,7 @@ global_policy_detect()
         clean_up
         exit 1
     fi
-    GLOBAL_POLICY_ARRAY_NUMBER=$(printf '%s\n' "${GLOBAL_POLICY_ARRAY[@]}" | wc -l)
+    GLOBAL_POLICY_ARRAY_NUMBER=$(printf '%s\n' "${GLOBAL_POLICY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     GLOBAL_POLICY_ARRAY_NUMBER_OPTION="$GLOBAL_POLICY_NUMBER"
     GLOBAL_POLICY_ARRAY_LIST=0
     while [[ "$GLOBAL_POLICY_ARRAY_NUMBER" > "0" ]]; do
@@ -420,7 +420,7 @@ mgmt_detect()
         clean_up
         exit 1
     fi
-    MGMT_ARRAY_NUMBER=$(printf '%s\n' "${MGMT_ARRAY[@]}" | wc -l)
+    MGMT_ARRAY_NUMBER=$(printf '%s\n' "${MGMT_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     MGMT_ARRAY_NUMBER_OPTION="$MGMT_ARRAY_NUMBER"
     MGMT_ARRAY_LIST=0
     while [[ "$MGMT_ARRAY_NUMBER" > "0" ]]; do
@@ -469,7 +469,7 @@ gateway_detect()
         clean_up
         exit 1
     fi
-    GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${GATEWAY_ARRAY[@]}" | wc -l)
+    GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     GATEWAY_ARRAY_NUMBER_OPTION="$GATEWAY_ARRAY_NUMBER"
     GATEWAY_ARRAY_LIST=0
     while [[ "$GATEWAY_ARRAY_NUMBER" > "0" ]]; do
