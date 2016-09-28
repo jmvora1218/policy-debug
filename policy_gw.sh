@@ -18,7 +18,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 2.8.1 August 19, 2016
+Version 2.8.2 September 28, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -464,6 +464,9 @@ enabled_blades >> "$GENERAL_LOG" 2>&1
 
 section_general_log "IPS STATUS (ips stat)"
 ips stat >> "$GENERAL_LOG" 2>&1
+
+section_general_log "CLUSTERXL STATUS (cphaprob stat)"
+cphaprob stat >> "$GENERAL_LOG" 2>&1
 
 section_general_log "CORE DUMPS"
 echo "/var/crash" >> "$GENERAL_LOG"
