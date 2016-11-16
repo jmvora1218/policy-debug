@@ -17,7 +17,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8.2 September 1, 2016
+Version 2.8.3 November 16, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -737,6 +737,11 @@ else
         cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
         cp -p $FWDIR/conf/rulebases_5_0.fws* "$DBGDIR_FILES"
     fi
+fi
+
+if [[ "$MAJOR_VERSION" == "R80" ]]; then
+    section_general_log "dleserver.jar BUILD NUMBER (cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar)"
+    cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$GENERAL_LOG"
 fi
 
 ###############################################################################
