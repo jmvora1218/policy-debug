@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# MIT License
+#
+# Copyright (c) 2017 Russell Seifert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the \"Software\"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 ###############################################################################
 # HELP SCREEN
 ###############################################################################
@@ -11,42 +33,17 @@ HELP_USAGE="Usage: $0 [OPTIONS]
    -f    enable more debug flags
    -m    disable minimum disk space check. files will be written
            to /var/log/tmp/debug
-   -l    license terms
    -v    version information
 "
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8.3 November 16, 2016
+Version 2.8.4 January 16, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
-HELP_LICENSE="
-MIT License
-
-Copyright (c) 2016 Russell Seifert
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the \"Software\"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"
-
 OPTIND=1
-while getopts ':h-:d-:f-:m-:l-:v-:' HELP_OPTION; do
+while getopts ':h-:d-:f-:m-:v-:' HELP_OPTION; do
     case "$HELP_OPTION" in
         h) echo "$HELP_USAGE" ; exit ;;
         d) set -vx ; exec &> >(tee script_debug.txt) ;;
@@ -71,8 +68,6 @@ fi
 clear
 echo -e "\033[1m**********************************************\\nWelcome to the Management Policy Debug Script\\n**********************************************\\n\033[0m"
 echo -e "This script will debug Management Policy problems\\nPlease answer the following questions\\n"
-echo "Debug is initializing, please wait..."
-sleep 2
 unset TMOUT
 
 ###############################################################################
@@ -505,6 +500,65 @@ gateway_detect()
         esac
     done
 }
+threatprevention_detect()
+{
+    THREAT_GATEWAY_FILE="$DBGDIR_FILES"/tp.txt
+    echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
+    if [[ -d "$MDSDIR" ]]; then
+        THREAT_AMW=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$"THREAT_GATEWAY_FILE))
+        THREAT_EM=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
+    else
+        THREAT_AMW=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$"THREAT_GATEWAY_FILE))
+        THREAT_EM=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
+    fi
+    if [[ -z "$THREAT_GATEWAY_ARRAY" ]]; then
+        echo -e "\\nError: There are no Gateways detected\\nVerify there are Gateways in the GUI and run the script again\\n"
+        clean_up
+        exit 1
+    fi
+    THREAT_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${THREAT_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
+    THREAT_GATEWAY_ARRAY_NUMBER_OPTION="$THREAT_GATEWAY_ARRAY_NUMBER"
+    THREAT_GATEWAY_ARRAY_LIST=0
+    while [[ "$THREAT_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+        let "THREAT_GATEWAY_ARRAY_LIST += 1"
+        echo "${THREAT_GATEWAY_ARRAY_LIST}. ${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_ARRAY_LIST-1))]}"
+        let "THREAT_GATEWAY_ARRAY_NUMBER -= 1"
+    done
+    while true; do
+        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+        echo -n "(1-${THREAT_GATEWAY_ARRAY_NUMBER_OPTION}): "
+        read THREAT_GATEWAY_NUMBER
+        case "$THREAT_GATEWAY_NUMBER" in
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                THREAT_GATEWAY_NAME="${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_NUMBER-1))]}"
+                if [[ -d "$MDSDIR" ]]; then
+                    THREAT_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
+                else
+                    THREAT_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
+        case "$THREAT_GATEWAY_NAME" in
+            "")
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+            "$THREAT_GATEWAY_NAME_EXIST")
+                echo "Gateway/Cluster: $THREAT_GATEWAY_NAME"
+                echo -e "\\nUsing $THREAT_GATEWAY_NAME" >> "$SESSION_LOG"
+                break ;;
+        esac
+    done
+    rm "$THREAT_GATEWAY_FILE"
+}
 
 ###############################################################################
 # PROGRESS BAR DURING DEBUG
@@ -527,7 +581,7 @@ progress_bar()
 ###############################################################################
 # DATABASE
 if [[ "$QUESTION" == "1" ]]; then
-    echo "This option will debug general Database Installation problems"
+    echo "This option will debug Database Installation problems"
     mgmt_detect
     if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
         echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d dbload $MGMT_NAME &> install_database_debug.txt" >> "$SESSION_LOG"
@@ -542,7 +596,7 @@ fi
 
 # VERIFY
 if [[ "$QUESTION" == "2" ]]; then
-    echo "This option will debug general Policy Verification problems"
+    echo "This option will debug Policy Verification problems"
     policy_detect
     if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
         echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d verify $POLICY_NAME &> policy_verify_debug.txt" >> "$SESSION_LOG"
@@ -557,29 +611,61 @@ fi
 
 # INSTALL
 if [[ "$QUESTION" == "3" ]]; then
-    echo "This option will debug general Policy Installation problems"
-    policy_detect
-    gateway_detect
-    if [[ "$MAJOR_VERSION" == "R80" ]]; then
-        if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
-            export INTERNAL_POLICY_LOADING=1
-            export TDERROR_ALL_ALL=5
+    echo -e "\\n--------POLICY DEBUGS AVAILABLE--------" | tee -a "$SESSION_LOG"
+    echo -e "\\n1. Network Security\\n2. Threat Prevention\\n" | tee -a "$SESSION_LOG"
+    while true; do
+        echo "Which policy do you want to debug?"
+        echo -n "(1-2): "
+        read NET_OR_THREAT
+        case "$NET_OR_THREAT" in
+            [1-2])
+                echo "Selected number $NET_OR_THREAT" >> "$SESSION_LOG"
+                break ;;
+            *)
+                echo -e "\\nError: Invalid option\\nPress CTRL-C to exit the script if needed\\n"
+                continue ;;
+        esac
+    done
+    if [[ "$NET_OR_THREAT" == "1" ]]; then
+        echo "This option will debug Network Security Policy Installation problems"
+        policy_detect
+        gateway_detect
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+            fi
         else
-            echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
-            export INTERNAL_POLICY_LOADING=1
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+            fi
         fi
+        echo -en "\\nInstalling Security Policy $POLICY_NAME to $GATEWAY_NAME   "
+        fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/policy_install_debug.txt &
+        progress_bar
     else
-        if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+        echo "This option will debug Threat Prevention Policy Installation problems"
+        policy_detect
+        threatprevention_detect
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+            export INTERNAL_POLICY_LOADING=1
             export TDERROR_ALL_ALL=5
         else
-            echo -e "\\nRunning:\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+            export TDERROR_ALL_ALL=5
         fi
+        echo -en "\\nInstalling Threat Prevention Policy $POLICY_NAME to $THREAT_GATEWAY_NAME   "
+        fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_policy_install_debug.txt &
+        progress_bar
     fi
-    echo -en "\\nInstalling Security Policy $POLICY_NAME to $GATEWAY_NAME   "
-    fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/policy_install_debug.txt &
-    progress_bar
 fi
 
 # SLOW INSTALL
@@ -602,7 +688,7 @@ fi
 
 # GLOBAL ASSIGN
 if [[ "$QUESTION" == "5" ]]; then
-    echo "This option will debug general Global Policy Assignment problems"
+    echo "This option will debug Global Policy Assignment problems"
     if [[ "$MAJOR_VERSION" == "R80" ]]; then
         JETTY_PID=$(pgrep -f $MDS_CPDIR/jetty/start.jar)
         API_STATUS=$(tail -n 1 $MDS_FWDIR/api/conf/jetty.state | grep STARTED)
