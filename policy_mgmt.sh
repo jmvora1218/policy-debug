@@ -38,7 +38,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.8.4 January 16, 2016
+Version 2.9 January 16, 2016
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -500,25 +500,25 @@ gateway_detect()
         esac
     done
 }
-threatprevention_detect()
+threatprevention_gateway_detect()
 {
     THREAT_GATEWAY_FILE="$DBGDIR_FILES"/tp.txt
     echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
     if [[ -d "$MDSDIR" ]]; then
         THREAT_AMW=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
-        THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$"THREAT_GATEWAY_FILE))
+        THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EM=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
     else
-        THREAT_AMW=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
-        THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
-        THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$"THREAT_GATEWAY_FILE))
-        THREAT_EM=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_AMW=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_AV=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_EX=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
+        THREAT_EM=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
     fi
     if [[ -z "$THREAT_GATEWAY_ARRAY" ]]; then
-        echo -e "\\nError: There are no Gateways detected\\nVerify there are Gateways in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Threat Prevention Gateways detected\\nVerify there are Threat Prevention Gateways in the GUI and run the script again\\n"
         clean_up
         exit 1
     fi
@@ -653,14 +653,23 @@ if [[ "$QUESTION" == "3" ]]; then
     else
         echo "This option will debug Threat Prevention Policy Installation problems"
         policy_detect
-        threatprevention_detect
+        threatprevention_gateway_detect
         if [[ "$MAJOR_VERSION" == "R80" ]]; then
-            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
-            export INTERNAL_POLICY_LOADING=1
-            export TDERROR_ALL_ALL=5
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+            fi
         else
-            echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
-            export TDERROR_ALL_ALL=5
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+            fi
         fi
         echo -en "\\nInstalling Threat Prevention Policy $POLICY_NAME to $THREAT_GATEWAY_NAME   "
         fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_policy_install_debug.txt &
