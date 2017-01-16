@@ -67,7 +67,7 @@ fi
 ###############################################################################
 clear
 echo -e "\033[1m**********************************************\\nWelcome to the Management Policy Debug Script\\n**********************************************\\n\033[0m"
-echo -e "This script will debug Management Policy problems\\nPlease answer the following questions\\n"
+echo -e "This script will debug Management Policy problems\\nPlease answer the following questions"
 unset TMOUT
 
 ###############################################################################
@@ -320,7 +320,7 @@ policy_detect()
         POLICY_ARRAY=($(echo -e "localhost\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     fi
     if [[ -z "$POLICY_ARRAY" ]]; then
-        echo -e "\\nError: There are no Policies detected\\nVerify there are Policies in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Policies detected\\nVerify there are Policies in the GUI\\n"
         clean_up
         exit 1
     fi
@@ -366,7 +366,7 @@ global_policy_detect()
     mdsenv
     GLOBAL_POLICY_ARRAY=($(cpmiquerybin attr "" policies_collections "" -a __name__ | grep -v "No Global Policy" | tee -a "$SESSION_LOG"))
     if [[ -z "$GLOBAL_POLICY_ARRAY" ]]; then
-        echo -e "\\nError: There are no Global Policies detected\\nVerify there are Global Policies in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Global Policies detected\\nVerify there are Global Policies in the GUI\\n"
         clean_up
         exit 1
     fi
@@ -411,7 +411,7 @@ mgmt_detect()
         MGMT_ARRAY=($(echo -e "localhost\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     fi
     if [[ -z "$MGMT_ARRAY" ]]; then
-        echo -e "\\nError: There are no Management servers detected\\nVerify there are Management servers in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Management servers detected\\nVerify there are Management servers in the GUI\\n"
         clean_up
         exit 1
     fi
@@ -460,7 +460,7 @@ gateway_detect()
         GATEWAY_ARRAY=($(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     fi
     if [[ -z "$GATEWAY_ARRAY" ]]; then
-        echo -e "\\nError: There are no Gateways detected\\nVerify there are Gateways in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Gateways detected\\nVerify there are Gateways in the GUI\\n"
         clean_up
         exit 1
     fi
@@ -509,16 +509,16 @@ threatprevention_gateway_detect()
         THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EM=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
-        THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
+        THREAT_GATEWAY_ARRAY=($(cat "$THREAT_GATEWAY_FILE" | sort -u | tee -a "$SESSION_LOG"))
     else
         THREAT_AMW=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_AV=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EX=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EM=($(echo -e "localhost\n-t network_objects -s firewall='installed' -s threat_emulation_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
-        THREAT_GATEWAY_ARRAY=$(cat "$THREAT_GATEWAY_FILE" | uniq | tee -a "$SESSION_LOG")
+        THREAT_GATEWAY_ARRAY=($(cat "$THREAT_GATEWAY_FILE" | sort -u | tee -a "$SESSION_LOG"))
     fi
     if [[ -z "$THREAT_GATEWAY_ARRAY" ]]; then
-        echo -e "\\nError: There are no Threat Prevention Gateways detected\\nVerify there are Threat Prevention Gateways in the GUI and run the script again\\n"
+        echo -e "\\nError: There are no Threat Prevention Gateways detected\\nVerify there are Threat Prevention Gateways in the GUI\\n"
         clean_up
         exit 1
     fi
