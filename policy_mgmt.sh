@@ -101,6 +101,7 @@ SCRIPTNAME=($(basename $0))
 FILES="$SCRIPTNAME"_files.$$
 MAJOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared VersionText 1)
 MINOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared SubVersionText 1)
+ISMDS=$($CPDIR/bin/cpprod_util CPPROD_GetValue PROVIDER-1 ProdActive 1 2> /dev/null)
 
 ###############################################################################
 # CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
@@ -197,7 +198,7 @@ echo -e "$HELP_VERSION\\nScript Started at $START_DATE" >> "$SESSION_LOG"
 ###############################################################################
 # CHANGE TO CMA CONTEXT IF MDS
 ###############################################################################
-if [[ -d "$MDSDIR" ]]; then
+if [[ "$ISMDS" == "1" ]]; then
     echo -e "\\nThis is a Multi-Domain Management Server\\n\\n--------DOMAINS DETECTED--------" | tee -a "$SESSION_LOG"
     CMA_ARRAY=($($MDSVERUTIL AllCMAs | sort | tee -a "$SESSION_LOG"))
     CMA_ARRAY_NUMBER=$(printf '%s\n' "${CMA_ARRAY[@]}" | wc -l | awk '{ print $1 }')
@@ -250,7 +251,7 @@ fi
 # ASK USER WHAT TO DEBUG
 ###############################################################################
 echo -e "\\n--------DEBUGS AVAILABLE--------" | tee -a "$SESSION_LOG"
-if [[ -d "$MDSDIR" ]]; then
+if [[ "$ISMDS" == "1" ]]; then
     echo -e "\\n1. Database Installation\\n2. Policy Verification\\n3. Policy Installation\\n4. Slow Policy Install\\n5. Assign Global Policy\\n" | tee -a "$SESSION_LOG"
     while true; do
         echo "Which option do you want to debug?"
@@ -314,7 +315,7 @@ ntpstat >> "$GENERAL_LOG" 2>&1
 policy_detect()
 {
     echo -e "\\n--------POLICIES DETECTED--------" | tee -a "$SESSION_LOG"
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         POLICY_ARRAY=($(echo -e "$CMA_IP\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     else
         POLICY_ARRAY=($(echo -e "localhost\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
@@ -339,7 +340,7 @@ policy_detect()
         case "$POLICY_NUMBER" in
             [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 POLICY_NAME="${POLICY_ARRAY[$((POLICY_NUMBER-1))]}"
-                if [[ -d "$MDSDIR" ]]; then
+                if [[ "$ISMDS" == "1" ]]; then
                     POLICY_NAME_EXIST=$(echo -e "$CMA_IP\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
                 else
                     POLICY_NAME_EXIST=$(echo -e "localhost\n-t policies_collections -a\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$POLICY_NAME"$)
@@ -405,7 +406,7 @@ global_policy_detect()
 mgmt_detect()
 {
     echo -e "\\n--------MANAGEMENTS DETECTED--------" | tee -a "$SESSION_LOG"
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         MGMT_ARRAY=($(echo -e "$CMA_IP\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     else
         MGMT_ARRAY=($(echo -e "localhost\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
@@ -430,7 +431,7 @@ mgmt_detect()
         case "$MGMT_NUMBER" in
             [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 MGMT_NAME="${MGMT_ARRAY[$((MGMT_NUMBER-1))]}"
-                if [[ -d "$MDSDIR" ]]; then
+                if [[ "$ISMDS" == "1" ]]; then
                     MGMT_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
                 else
                     MGMT_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s management='true' -s log_server='true'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$MGMT_NAME"$)
@@ -454,7 +455,7 @@ mgmt_detect()
 gateway_detect()
 {
     echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         GATEWAY_ARRAY=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
     else
         GATEWAY_ARRAY=($(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
@@ -479,7 +480,7 @@ gateway_detect()
         case "$GATEWAY_NUMBER" in
             [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
-                if [[ -d "$MDSDIR" ]]; then
+                if [[ "$ISMDS" == "1" ]]; then
                     GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
                 else
                     GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
@@ -504,7 +505,7 @@ threatprevention_gateway_detect()
 {
     THREAT_GATEWAY_FILE="$DBGDIR_FILES"/tp.txt
     echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         THREAT_AMW=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_malware_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_AV=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s anti_virus_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
         THREAT_EX=($(echo -e "$CMA_IP\n-t network_objects -s firewall='installed' -s scrubbing_blade='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' >> "$THREAT_GATEWAY_FILE"))
@@ -537,7 +538,7 @@ threatprevention_gateway_detect()
         case "$THREAT_GATEWAY_NUMBER" in
             [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                 THREAT_GATEWAY_NAME="${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_NUMBER-1))]}"
-                if [[ -d "$MDSDIR" ]]; then
+                if [[ "$ISMDS" == "1" ]]; then
                     THREAT_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
                 else
                     THREAT_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
@@ -778,7 +779,7 @@ section_general_log "LICENSES (cplic print -x)"
 cplic print -x >> "$GENERAL_LOG"
 
 section_general_log "HOTFIXES (cpinfo -y all)"
-if [[ -d "$MDSDIR" ]]; then
+if [[ "$ISMDS" == "1" ]]; then
     mdsenv
     script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
 else
@@ -786,7 +787,7 @@ else
 fi
 
 section_general_log "JUMBO HOTFIX TAKE (installed_jumbo_take)"
-if [[ -d "$MDSDIR" ]]; then
+if [[ "$ISMDS" == "1" ]]; then
     if [[ -e $MDS_TEMPLATE/bin/installed_jumbo_take ]]; then
         installed_jumbo_take >> "$GENERAL_LOG"
     else
@@ -803,7 +804,7 @@ fi
 cp -p /var/log/messages* "$DBGDIR_FILES"
 
 if [[ "$MAJOR_VERSION" == "R80" ]]; then
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
         cp -p $MDS_TEMPLATE/log/cpm.elg* "$DBGDIR_FILES"
         cp -p $MDS_TEMPLATE/log/install_policy.elg* "$DBGDIR_FILES"
@@ -820,7 +821,7 @@ if [[ "$MAJOR_VERSION" == "R80" ]]; then
         cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES"
     fi
 else
-    if [[ -d "$MDSDIR" ]]; then
+    if [[ "$ISMDS" == "1" ]]; then
         cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
         mdsenv "$CMA_NAME"
         cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
