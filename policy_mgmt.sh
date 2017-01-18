@@ -38,7 +38,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.9 January 16, 2016
+Version 2.9 January 16, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
