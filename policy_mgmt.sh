@@ -38,7 +38,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.9 January 16, 2017
+Version 2.9 January 19, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -100,15 +100,14 @@ fi
 SCRIPTNAME=($(basename $0))
 FILES="$SCRIPTNAME"_files.$$
 MAJOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared VersionText 1)
-MINOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared SubVersionText 1)
 ISMDS=$($CPDIR/bin/cpprod_util CPPROD_GetValue PROVIDER-1 ProdActive 1 2> /dev/null)
 
 ###############################################################################
 # CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
 ###############################################################################
 if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
-    DBGDIR=/var/log/tmp/debug
-    DBGDIR_FILES=/var/log/tmp/debug/"$FILES"
+    DBGDIR=/var/log/tmp/policy-debug
+    DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
     if [[ ! -d "$DBGDIR_FILES" ]]; then
         mkdir -p "$DBGDIR_FILES"
     else
@@ -121,8 +120,8 @@ else
             echo -e "\\nError: There is not enough disk space available\\nPlease follow sk60080 to clear disk space\\n"
             exit 1
         else
-            DBGDIR=/var/log/tmp/debug
-            DBGDIR_FILES=/var/log/tmp/debug/"$FILES"
+            DBGDIR=/var/log/tmp/policy-debug
+            DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
             if [[ ! -d "$DBGDIR_FILES" ]]; then
                 mkdir -p "$DBGDIR_FILES"
             else
@@ -131,8 +130,8 @@ else
             fi
         fi
     else
-        DBGDIR=/tmp/debug
-        DBGDIR_FILES=/tmp/debug/"$FILES"
+        DBGDIR=/tmp/policy-debug
+        DBGDIR_FILES=/tmp/policy-debug/"$FILES"
         if [[ ! -d "$DBGDIR_FILES" ]]; then
             mkdir -p "$DBGDIR_FILES"
         else
@@ -843,7 +842,7 @@ fi
 ###############################################################################
 # COMPRESS FILES FOR FINAL ARCHIVE
 ###############################################################################
-HOST_DTS=`hostname`_at_`date +%Y-%m-%d_%Hh%Mm%Ss`
+HOST_DTS=($(hostname)_at_$(date +%Y-%m-%d_%Hh%Mm%Ss))
 FINAL_ARCHIVE="$DBGDIR"/debug_of_"$HOST_DTS".tgz
 echo "Compressing files..."
 tar czf "$DBGDIR"/debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"

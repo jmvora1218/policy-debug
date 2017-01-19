@@ -1,5 +1,27 @@
 #!/bin/bash
 
+# MIT License
+#
+# Copyright (c) 2017 Russell Seifert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the \"Software\"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 ###############################################################################
 # HELP SCREEN
 ###############################################################################
@@ -12,42 +34,17 @@ HELP_USAGE="Usage: $0 [OPTIONS]
    -f    enable more kernel debug flags
    -m    disable minimum disk space check. files will be written
            to /var/log/tmp/debug
-   -l    license terms
    -v    version information
 "
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 2.8.2 September 28, 2016
+Version 2.9 January 19, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
-HELP_LICENSE="
-MIT License
-
-Copyright (c) 2016 Russell Seifert
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the \"Software\"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"
-
 OPTIND=1
-while getopts ':h-:b-:d-:f-:m-:l-:v-:' HELP_OPTION; do
+while getopts ':h-:b-:d-:f-:m-:v-:' HELP_OPTION; do
     case "$HELP_OPTION" in
         h) echo "$HELP_USAGE" ; exit ;;
         b) DEBUG_BUFFER_ON=1 ;;
@@ -72,9 +69,7 @@ fi
 ###############################################################################
 clear
 echo -e "\033[1m*******************************************\\nWelcome to the Gateway Policy Debug Script\\n*******************************************\\n\033[0m"
-echo -e "This script will debug Gateway Policy problems\\nStop the script by pressing CTRL-C only if there is a problem\\n"
-echo "Debug is initializing, please wait..."
-sleep 2
+echo -e "This script will debug Gateway Policy problems\\nStop the script by pressing CTRL-C only if there is a problem"
 unset TMOUT
 
 ###############################################################################
@@ -127,6 +122,7 @@ fi
 ###############################################################################
 SCRIPTNAME=($(basename $0))
 FILES="$SCRIPTNAME"_files.$$
+MAJOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared VersionText 1)
 ISVSX=$($CPDIR/bin/cpprod_util FwIsVSX 2> /dev/null)
 IS61K=$($CPDIR/bin/cpprod_util CPPROD_GetValue ASG_CHASSIS ChassisID 1 2> /dev/null)
 
@@ -134,8 +130,8 @@ IS61K=$($CPDIR/bin/cpprod_util CPPROD_GetValue ASG_CHASSIS ChassisID 1 2> /dev/n
 # CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
 ###############################################################################
 if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
-    DBGDIR=/var/log/tmp/debug
-    DBGDIR_FILES=/var/log/tmp/debug/"$FILES"
+    DBGDIR=/var/log/tmp/policy-debug
+    DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
     if [[ ! -d "$DBGDIR_FILES" ]]; then
         mkdir -p "$DBGDIR_FILES"
     else
@@ -148,8 +144,8 @@ else
             echo -e "\\nError: There is not enough disk space available\\nPlease follow sk60080 to clear disk space\\n"
             exit 1
         else
-            DBGDIR=/var/log/tmp/debug
-            DBGDIR_FILES=/var/log/tmp/debug/"$FILES"
+            DBGDIR=/var/log/tmp/policy-debug
+            DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
             if [[ ! -d "$DBGDIR_FILES" ]]; then
                 mkdir -p "$DBGDIR_FILES"
             else
@@ -158,8 +154,8 @@ else
             fi
         fi
     else
-        DBGDIR=/tmp/debug
-        DBGDIR_FILES=/tmp/debug/"$FILES"
+        DBGDIR=/tmp/policy-debug
+        DBGDIR_FILES=/tmp/policy-debug/"$FILES"
         if [[ ! -d "$DBGDIR_FILES" ]]; then
             mkdir -p "$DBGDIR_FILES"
         else
@@ -230,7 +226,7 @@ if [[ "$IS61K" != "Failed to find the value" ]]; then
                 echo "Using Chassis $IS61K Blade $BLADEID" >> "$SESSION_LOG"
                 ;;
             *)
-                echo -e "Please change to the correct Chassis and Blade and run the script again\\n"
+                echo -e "Please change to the correct Chassis and Blade\\n"
                 clean_up
                 exit 1
                 ;;
@@ -250,7 +246,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
                 echo "Using VS $VSID_SCRIPT" >> "$SESSION_LOG"
                 ;;
             *)
-                echo -e "Please change to the correct Virtual System and run the script again\\n"
+                echo -e "Please change to the correct Virtual System\\n"
                 clean_up
                 exit 1
                 ;;
@@ -503,10 +499,15 @@ fi
 cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
 cp -p /var/log/messages* "$DBGDIR_FILES"
 
+if [[ "$MAJOR_VERSION" == "R80" ]]; then
+    section_general_log "dleserver.jar BUILD NUMBER (cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar)"
+    cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$GENERAL_LOG"
+fi
+
 ###############################################################################
 # COMPRESS FILES FOR FINAL ARCHIVE
 ###############################################################################
-HOST_DTS=`hostname`_at_`date +%Y-%m-%d_%Hh%Mm%Ss`
+HOST_DTS=($(hostname)_at_$(date +%Y-%m-%d_%Hh%Mm%Ss))
 FINAL_ARCHIVE="$DBGDIR"/debug_of_"$HOST_DTS".tgz
 echo "Compressing files..."
 tar czf "$DBGDIR"/debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
