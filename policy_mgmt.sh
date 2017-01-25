@@ -1,26 +1,8 @@
 #!/bin/bash
 
-# MIT License
-#
-# Copyright (c) 2017 Russell Seifert
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the \"Software\"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# Russell Seifert
+# Escalation Engineer - Management Products
+# Check Point Software Technologies Ltd.
 
 ###############################################################################
 # HELP SCREEN
@@ -38,7 +20,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 2.9 January 19, 2017
+Version 2.9.1 January 25, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -360,6 +342,7 @@ policy_detect()
         esac
     done
 }
+
 global_policy_detect()
 {
     echo -e "\\n--------GLOBAL POLICIES DETECTED--------" | tee -a "$SESSION_LOG"
@@ -402,6 +385,7 @@ global_policy_detect()
         esac
     done
 }
+
 mgmt_detect()
 {
     echo -e "\\n--------MANAGEMENTS DETECTED--------" | tee -a "$SESSION_LOG"
@@ -451,6 +435,7 @@ mgmt_detect()
         esac
     done
 }
+
 gateway_detect()
 {
     echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
@@ -500,6 +485,7 @@ gateway_detect()
         esac
     done
 }
+
 threatprevention_gateway_detect()
 {
     THREAT_GATEWAY_FILE="$DBGDIR_FILES"/tp.txt
@@ -560,6 +546,106 @@ threatprevention_gateway_detect()
     rm "$THREAT_GATEWAY_FILE"
 }
 
+qos_gateway_detect()
+{
+    echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
+    if [[ "$ISMDS" == "1" ]]; then
+        QOS_GATEWAY_ARRAY=($(echo -e "$CMA_IP\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
+    else
+        QOS_GATEWAY_ARRAY=($(echo -e "localhost\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
+    fi
+    if [[ -z "$QOS_GATEWAY_ARRAY" ]]; then
+        echo -e "\\nError: There are no QoS Gateways detected\\nVerify there are QoS Gateways in the GUI\\n"
+        clean_up
+        exit 1
+    fi
+    QOS_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${QOS_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
+    QOS_GATEWAY_ARRAY_NUMBER_OPTION="$QOS_GATEWAY_ARRAY_NUMBER"
+    QOS_GATEWAY_ARRAY_LIST=0
+    while [[ "$QOS_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+        let "QOS_GATEWAY_ARRAY_LIST += 1"
+        echo "${QOS_GATEWAY_ARRAY_LIST}. ${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_ARRAY_LIST-1))]}"
+        let "QOS_GATEWAY_ARRAY_NUMBER -= 1"
+    done
+    while true; do
+        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+        echo -n "(1-${QOS_GATEWAY_ARRAY_NUMBER_OPTION}): "
+        read QOS_GATEWAY_NUMBER
+        case "$QOS_GATEWAY_NUMBER" in
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                QOS_GATEWAY_NAME="${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_NUMBER-1))]}"
+                if [[ "$ISMDS" == "1" ]]; then
+                    QOS_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
+                else
+                    QOS_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
+        case "$QOS_GATEWAY_NAME" in
+            "")
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+            "$QOS_GATEWAY_NAME_EXIST")
+                echo "Gateway/Cluster: $QOS_GATEWAY_NAME"
+                echo -e "\\nUsing $QOS_GATEWAY_NAME" >> "$SESSION_LOG"
+                break ;;
+        esac
+    done
+}
+
+desktop_gateway_detect()
+{
+    echo -e "\\n--------GATEWAYS DETECTED--------" | tee -a "$SESSION_LOG"
+    if [[ "$ISMDS" == "1" ]]; then
+        DESKTOP_GATEWAY_ARRAY=($(echo -e "$CMA_IP\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
+    else
+        DESKTOP_GATEWAY_ARRAY=($(echo -e "localhost\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | tee -a "$SESSION_LOG"))
+    fi
+    if [[ -z "$DESKTOP_GATEWAY_ARRAY" ]]; then
+        echo -e "\\nError: There are no Desktop Security Gateways detected\\nVerify there are Desktop Security Gateways in the GUI\\n"
+        clean_up
+        exit 1
+    fi
+    DESKTOP_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${DESKTOP_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
+    DESKTOP_GATEWAY_ARRAY_NUMBER_OPTION="$DESKTOP_GATEWAY_ARRAY_NUMBER"
+    DESKTOP_GATEWAY_ARRAY_LIST=0
+    while [[ "$DESKTOP_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+        let "DESKTOP_GATEWAY_ARRAY_LIST += 1"
+        echo "${DESKTOP_GATEWAY_ARRAY_LIST}. ${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_ARRAY_LIST-1))]}"
+        let "DESKTOP_GATEWAY_ARRAY_NUMBER -= 1"
+    done
+    while true; do
+        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+        echo -n "(1-${DESKTOP_GATEWAY_ARRAY_NUMBER_OPTION}): "
+        read DESKTOP_GATEWAY_NUMBER
+        case "$DESKTOP_GATEWAY_NUMBER" in
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                DESKTOP_GATEWAY_NAME="${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_NUMBER-1))]}"
+                if [[ "$ISMDS" == "1" ]]; then
+                    DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
+                else
+                    DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
+                fi
+                ;;
+            *)
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+        esac
+        case "$DESKTOP_GATEWAY_NAME" in
+            "")
+                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                continue ;;
+            "$DESKTOP_GATEWAY_NAME_EXIST")
+                echo "Gateway/Cluster: $DESKTOP_GATEWAY_NAME"
+                echo -e "\\nUsing $DESKTOP_GATEWAY_NAME" >> "$SESSION_LOG"
+                break ;;
+        esac
+    done
+}
+
 ###############################################################################
 # PROGRESS BAR DURING DEBUG
 ###############################################################################
@@ -612,67 +698,115 @@ fi
 # INSTALL
 if [[ "$QUESTION" == "3" ]]; then
     echo -e "\\n--------POLICY DEBUGS AVAILABLE--------" | tee -a "$SESSION_LOG"
-    echo -e "\\n1. Network Security\\n2. Threat Prevention\\n" | tee -a "$SESSION_LOG"
+    echo -e "\\n1. Network Security\\n2. Threat Prevention\\n3. QoS\\n4. Desktop Security\\n" | tee -a "$SESSION_LOG"
     while true; do
         echo "Which policy do you want to debug?"
-        echo -n "(1-2): "
-        read NET_OR_THREAT
-        case "$NET_OR_THREAT" in
-            [1-2])
-                echo "Selected number $NET_OR_THREAT" >> "$SESSION_LOG"
+        echo -n "(1-4): "
+        read WHICH_POLICY
+        case "$WHICH_POLICY" in
+            [1-4])
+                echo "Selected number $WHICH_POLICY" >> "$SESSION_LOG"
                 break ;;
             *)
                 echo -e "\\nError: Invalid option\\nPress CTRL-C to exit the script if needed\\n"
                 continue ;;
         esac
     done
-    if [[ "$NET_OR_THREAT" == "1" ]]; then
+    if [[ "$WHICH_POLICY" == "1" ]]; then
         echo "This option will debug Network Security Policy Installation problems"
         policy_detect
         gateway_detect
         if [[ "$MAJOR_VERSION" == "R80" ]]; then
             if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> security_policy_install_debug.txt" >> "$SESSION_LOG"
                 export INTERNAL_POLICY_LOADING=1
                 export TDERROR_ALL_ALL=5
             else
-                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> security_policy_install_debug.txt" >> "$SESSION_LOG"
                 export INTERNAL_POLICY_LOADING=1
             fi
         else
             if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> security_policy_install_debug.txt" >> "$SESSION_LOG"
                 export TDERROR_ALL_ALL=5
             else
-                echo -e "\\nRunning:\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nfwm -d load $POLICY_NAME $GATEWAY_NAME &> security_policy_install_debug.txt" >> "$SESSION_LOG"
             fi
         fi
         echo -en "\\nInstalling Security Policy $POLICY_NAME to $GATEWAY_NAME   "
-        fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/policy_install_debug.txt &
+        fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/security_policy_install_debug.txt &
         progress_bar
-    else
+    elif [[ "$WHICH_POLICY" == "2" ]]; then
         echo "This option will debug Threat Prevention Policy Installation problems"
         policy_detect
         threatprevention_gateway_detect
         if [[ "$MAJOR_VERSION" == "R80" ]]; then
             if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_prevention_policy_install_debug.txt" >> "$SESSION_LOG"
                 export INTERNAL_POLICY_LOADING=1
                 export TDERROR_ALL_ALL=5
             else
-                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_prevention_policy_install_debug.txt" >> "$SESSION_LOG"
                 export INTERNAL_POLICY_LOADING=1
             fi
         else
             if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
-                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_prevention_policy_install_debug.txt" >> "$SESSION_LOG"
                 export TDERROR_ALL_ALL=5
             else
-                echo -e "\\nRunning:\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_policy_install_debug.txt" >> "$SESSION_LOG"
+                echo -e "\\nRunning:\\nfwm -d load -p threatprevention $POLICY_NAME $THREAT_GATEWAY_NAME &> threat_prevention_policy_install_debug.txt" >> "$SESSION_LOG"
             fi
         fi
         echo -en "\\nInstalling Threat Prevention Policy $POLICY_NAME to $THREAT_GATEWAY_NAME   "
-        fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_policy_install_debug.txt &
+        fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_prevention_policy_install_debug.txt &
+        progress_bar
+    elif [[ "$WHICH_POLICY" == "3" ]]; then
+        echo "This option will debug QoS Policy Installation problems"
+        policy_detect
+        qos_gateway_detect
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfgate -d load ${POLICY_NAME}.F $QOS_GATEWAY_NAME &> qos_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfgate -d load ${POLICY_NAME}.F $QOS_GATEWAY_NAME &> qos_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+            fi
+        else
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfgate -d load ${POLICY_NAME}.F $QOS_GATEWAY_NAME &> qos_policy_install_debug.txt" >> "$SESSION_LOG"
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nfgate -d load ${POLICY_NAME}.F $QOS_GATEWAY_NAME &> qos_policy_install_debug.txt" >> "$SESSION_LOG"
+            fi
+        fi
+        echo -en "\\nInstalling QoS Policy $POLICY_NAME to $QOS_GATEWAY_NAME   "
+        fgate -d load "${POLICY_NAME}.F" "$QOS_GATEWAY_NAME" &> "$DBGDIR_FILES"/qos_policy_install_debug.txt &
+        progress_bar
+    elif [[ "$WHICH_POLICY" == "4" ]]; then
+        echo "This option will debug Desktop Security Policy Installation problems"
+        policy_detect
+        desktop_gateway_detect
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d psload $FWDIR/conf/${POLICY_NAME}.S $DESKTOP_GATEWAY_NAME &> desktop_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nexport INTERNAL_POLICY_LOADING=1\\nfwm -d psload $FWDIR/conf/${POLICY_NAME}.S $DESKTOP_GATEWAY_NAME &> desktop_policy_install_debug.txt" >> "$SESSION_LOG"
+                export INTERNAL_POLICY_LOADING=1
+            fi
+        else
+            if [[ "$MORE_DEBUG_FLAGS" == "1" ]]; then
+                echo -e "\\nRunning:\\nexport TDERROR_ALL_ALL=5\\nfwm -d psload $FWDIR/conf/${POLICY_NAME}.S $DESKTOP_GATEWAY_NAME &> desktop_policy_install_debug.txt" >> "$SESSION_LOG"
+                export TDERROR_ALL_ALL=5
+            else
+                echo -e "\\nRunning:\\nfwm -d psload $FWDIR/conf/${POLICY_NAME}.S $DESKTOP_GATEWAY_NAME &> desktop_policy_install_debug.txt" >> "$SESSION_LOG"
+            fi
+        fi
+        echo -en "\\nInstalling Desktop Security Policy $POLICY_NAME to $DESKTOP_GATEWAY_NAME   "
+        fwm -d psload "$FWDIR/conf/${POLICY_NAME}.S" "$DESKTOP_GATEWAY_NAME" &> "$DBGDIR_FILES"/desktop_policy_install_debug.txt &
         progress_bar
     fi
 fi
