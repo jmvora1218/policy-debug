@@ -23,4 +23,3 @@ All the relevant debug files and information will be compressed into a tgz file.
 
 6. Answer the questions if asked.
 7. The script will stop automatically when it is finished.
-8. Upload the compressed file using Check Point Uploader on sk108152.
