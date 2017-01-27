@@ -15,7 +15,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
            created in the current working directory
    -f    enable more kernel debug flags
    -m    disable minimum disk space check. files will be written
-           to /var/log/tmp/debug
+           to /var/log/tmp/policy-debug
    -v    version information
 "
 
