@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 2.9.2 January 27, 2017
+Version 3.0 January 27, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
