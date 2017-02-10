@@ -14,26 +14,25 @@ HELP_USAGE="Usage: $0 [OPTIONS]
    -d    debug this script. a log file named 'script_debug.txt' will be
            created in the current working directory
    -f    enable more kernel debug flags
-   -m    disable minimum disk space check. files will be written
+   -s    disable minimum disk space check. files will be written
            to /var/log/tmp/policy-debug
    -v    version information
 "
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.0 January 27, 2017
+Version 3.1 February 12, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
 OPTIND=1
-while getopts ':h-:b-:d-:f-:m-:v-:' HELP_OPTION; do
+while getopts ':h-:b-:d-:f-:s-:v-:' HELP_OPTION; do
     case "$HELP_OPTION" in
         h) echo "$HELP_USAGE" ; exit ;;
         b) DEBUG_BUFFER_ON=1 ;;
         d) set -vx ; exec &> >(tee script_debug.txt) ;;
         f) MORE_DEBUG_FLAGS=1 ;;
         m) SPACE_CHECK_OFF=1 ;;
-        l) echo "$HELP_LICENSE" ; exit ;;
         v) echo "$HELP_VERSION" ; exit ;;
         \?) printf "Invalid option: -%s\n" "$OPTARG" >&2
             echo "$HELP_USAGE" >&2 ; exit 1 ;;

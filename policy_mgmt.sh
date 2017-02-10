@@ -13,25 +13,26 @@ HELP_USAGE="Usage: $0 [OPTIONS]
    -d    debug this script. a log file named 'script_debug.txt' will be
            created in the current working directory
    -f    enable more debug flags
-   -m    disable minimum disk space check. files will be written
+   -m    install policy to more than one gateway
+   -s    disable minimum disk space check. files will be written
            to /var/log/tmp/policy-debug
    -v    version information
 "
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.0 January 27, 2017
+Version 3.1 February 12, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
 OPTIND=1
-while getopts ':h-:d-:f-:m-:v-:' HELP_OPTION; do
+while getopts ':h-:d-:f-:m-:s-:v-:' HELP_OPTION; do
     case "$HELP_OPTION" in
         h) echo "$HELP_USAGE" ; exit ;;
         d) set -vx ; exec &> >(tee script_debug.txt) ;;
         f) MORE_DEBUG_FLAGS=1 ;;
-        m) SPACE_CHECK_OFF=1 ;;
-        l) echo "$HELP_LICENSE" ; exit ;;
+        m) MULTIPLE_INSTALL=1 ;;
+        s) SPACE_CHECK_OFF=1 ;;
         v) echo "$HELP_VERSION" ; exit ;;
         \?) printf "Invalid option: -%s\n" "$OPTARG" >&2
             echo "$HELP_USAGE" >&2 ; exit 1 ;;
@@ -175,6 +176,7 @@ START_DATE=$(/bin/date "+%d %b %Y %H:%M:%S %z")
 echo -e "$HELP_VERSION\\nScript Started at $START_DATE" >> "$SESSION_LOG"
 [[ "$SPACE_CHECK_OFF" == "1" ]] && echo -e "\\nWarning: Minimum disk space check is disabled" | tee -a "$SESSION_LOG"
 [[ "$MORE_DEBUG_FLAGS" == "1" ]] && echo -e "\\nInfo: More debug flags is enabled" | tee -a "$SESSION_LOG"
+[[ "$MULTIPLE_INSTALL" == "1" ]] && echo -e "\\nInfo: Install to multiple Gateways is enabled" | tee -a "$SESSION_LOG"
 
 ###############################################################################
 # CHANGE TO CMA CONTEXT IF MDS
@@ -452,38 +454,61 @@ gateway_detect()
     GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     GATEWAY_ARRAY_NUMBER_OPTION="$GATEWAY_ARRAY_NUMBER"
     GATEWAY_ARRAY_LIST=0
-    while [[ "$GATEWAY_ARRAY_NUMBER" > "0" ]]; do
-        let "GATEWAY_ARRAY_LIST += 1"
-        echo "${GATEWAY_ARRAY_LIST}. ${GATEWAY_ARRAY[$((GATEWAY_ARRAY_LIST-1))]}"
-        let "GATEWAY_ARRAY_NUMBER -= 1"
-    done
-    while true; do
-        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
-        echo -n "(1-${GATEWAY_ARRAY_NUMBER_OPTION}): "
-        read GATEWAY_NUMBER
-        case "$GATEWAY_NUMBER" in
-            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
-                GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
-                if [[ "$ISMDS" == "1" ]]; then
-                    GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
-                else
-                    GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
-                fi
-                ;;
-            *)
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-        esac
-        case "$GATEWAY_NAME" in
-            "")
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-            "$GATEWAY_NAME_EXIST")
-                echo "Gateway/Cluster: $GATEWAY_NAME"
-                echo -e "\\nUsing $GATEWAY_NAME" >> "$SESSION_LOG"
-                break ;;
-        esac
-    done
+    if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+        while [[ "$GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "GATEWAY_ARRAY_LIST += 1"
+            echo "${GATEWAY_ARRAY[$((GATEWAY_ARRAY_LIST-1))]}"
+            let "GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat are the names of the Gateways/Clusters you want to install $POLICY_NAME to?"
+            echo "Enter the names and separate each with a space"
+            read -a MULTIPLE_GATEWAY_NAMES
+            GATEWAY_NAME=$(printf '%s ' "${MULTIPLE_GATEWAY_NAMES[@]}")
+            echo -e "\\nGoing to install $POLICY_NAME to: $GATEWAY_NAME"
+            read -p "Are these the correct Gateways/Clusters? (y/n) [n]? " CORRECT_GWS
+            case "$CORRECT_GWS" in
+                [yY][eE][sS]|[yY])
+                    echo -e "\\nUsing $GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+                *)
+                    echo -e "\\nPlease enter the right Gateway/Cluster names\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+        done
+    else
+        while [[ "$GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "GATEWAY_ARRAY_LIST += 1"
+            echo "${GATEWAY_ARRAY_LIST}. ${GATEWAY_ARRAY[$((GATEWAY_ARRAY_LIST-1))]}"
+            let "GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+            echo -n "(1-${GATEWAY_ARRAY_NUMBER_OPTION}): "
+            case "$GATEWAY_NUMBER" in
+                [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                    GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
+                    if [[ "$ISMDS" == "1" ]]; then
+                        GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
+                    else
+                        GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$GATEWAY_NAME"$)
+                    fi
+                    ;;
+                *)
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+            case "$GATEWAY_NAME" in
+                "")
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+                "$GATEWAY_NAME_EXIST")
+                    echo "Gateway/Cluster: $GATEWAY_NAME"
+                    echo -e "\\nUsing $GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+            esac
+        done
+    fi
 }
 
 threatprevention_gateway_detect()
@@ -511,39 +536,63 @@ threatprevention_gateway_detect()
     THREAT_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${THREAT_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     THREAT_GATEWAY_ARRAY_NUMBER_OPTION="$THREAT_GATEWAY_ARRAY_NUMBER"
     THREAT_GATEWAY_ARRAY_LIST=0
-    while [[ "$THREAT_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
-        let "THREAT_GATEWAY_ARRAY_LIST += 1"
-        echo "${THREAT_GATEWAY_ARRAY_LIST}. ${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_ARRAY_LIST-1))]}"
-        let "THREAT_GATEWAY_ARRAY_NUMBER -= 1"
-    done
-    while true; do
-        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
-        echo -n "(1-${THREAT_GATEWAY_ARRAY_NUMBER_OPTION}): "
-        read THREAT_GATEWAY_NUMBER
-        case "$THREAT_GATEWAY_NUMBER" in
-            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
-                THREAT_GATEWAY_NAME="${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_NUMBER-1))]}"
-                if [[ "$ISMDS" == "1" ]]; then
-                    THREAT_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
-                else
-                    THREAT_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
-                fi
-                ;;
-            *)
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-        esac
-        case "$THREAT_GATEWAY_NAME" in
-            "")
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-            "$THREAT_GATEWAY_NAME_EXIST")
-                echo "Gateway/Cluster: $THREAT_GATEWAY_NAME"
-                echo -e "\\nUsing $THREAT_GATEWAY_NAME" >> "$SESSION_LOG"
-                break ;;
-        esac
-    done
-    rm "$THREAT_GATEWAY_FILE"
+    if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+        while [[ "$THREAT_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "THREAT_GATEWAY_ARRAY_LIST += 1"
+            echo "${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_ARRAY_LIST-1))]}"
+            let "THREAT_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat are the names of the Gateways/Clusters you want to install $POLICY_NAME to?"
+            echo "Enter the names and separate each with a space"
+            read -a THREAT_MULTIPLE_GATEWAY_NAMES
+            THREAT_GATEWAY_NAME=$(printf '%s ' "${THREAT_MULTIPLE_GATEWAY_NAMES[@]}")
+            echo -e "\\nGoing to install $POLICY_NAME to: $THREAT_GATEWAY_NAME"
+            read -p "Are these the correct Gateways/Clusters? (y/n) [n]? " CORRECT_THREAT_GWS
+            case "$CORRECT_THREAT_GWS" in
+                [yY][eE][sS]|[yY])
+                    echo -e "\\nUsing $THREAT_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+                *)
+                    echo -e "\\nPlease enter the right Gateway/Cluster names\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+        done
+    else
+        while [[ "$THREAT_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "THREAT_GATEWAY_ARRAY_LIST += 1"
+            echo "${THREAT_GATEWAY_ARRAY_LIST}. ${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_ARRAY_LIST-1))]}"
+            let "THREAT_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+            echo -n "(1-${THREAT_GATEWAY_ARRAY_NUMBER_OPTION}): "
+            read THREAT_GATEWAY_NUMBER
+            case "$THREAT_GATEWAY_NUMBER" in
+                [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                    THREAT_GATEWAY_NAME="${THREAT_GATEWAY_ARRAY[$((THREAT_GATEWAY_NUMBER-1))]}"
+                    if [[ "$ISMDS" == "1" ]]; then
+                        THREAT_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
+                    else
+                        THREAT_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s firewall='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$THREAT_GATEWAY_NAME"$)
+                    fi
+                    ;;
+                *)
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+            case "$THREAT_GATEWAY_NAME" in
+                "")
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+                "$THREAT_GATEWAY_NAME_EXIST")
+                    echo "Gateway/Cluster: $THREAT_GATEWAY_NAME"
+                    echo -e "\\nUsing $THREAT_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+            esac
+        done
+        rm "$THREAT_GATEWAY_FILE"
+    fi
 }
 
 qos_gateway_detect()
@@ -562,38 +611,62 @@ qos_gateway_detect()
     QOS_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${QOS_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     QOS_GATEWAY_ARRAY_NUMBER_OPTION="$QOS_GATEWAY_ARRAY_NUMBER"
     QOS_GATEWAY_ARRAY_LIST=0
-    while [[ "$QOS_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
-        let "QOS_GATEWAY_ARRAY_LIST += 1"
-        echo "${QOS_GATEWAY_ARRAY_LIST}. ${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_ARRAY_LIST-1))]}"
-        let "QOS_GATEWAY_ARRAY_NUMBER -= 1"
-    done
-    while true; do
-        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
-        echo -n "(1-${QOS_GATEWAY_ARRAY_NUMBER_OPTION}): "
-        read QOS_GATEWAY_NUMBER
-        case "$QOS_GATEWAY_NUMBER" in
-            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
-                QOS_GATEWAY_NAME="${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_NUMBER-1))]}"
-                if [[ "$ISMDS" == "1" ]]; then
-                    QOS_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
-                else
-                    QOS_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
-                fi
-                ;;
-            *)
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-        esac
-        case "$QOS_GATEWAY_NAME" in
-            "")
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-            "$QOS_GATEWAY_NAME_EXIST")
-                echo "Gateway/Cluster: $QOS_GATEWAY_NAME"
-                echo -e "\\nUsing $QOS_GATEWAY_NAME" >> "$SESSION_LOG"
-                break ;;
-        esac
-    done
+    if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+        while [[ "$QOS_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "QOS_GATEWAY_ARRAY_LIST += 1"
+            echo "${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_ARRAY_LIST-1))]}"
+            let "QOS_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat are the names of the Gateways/Clusters you want to install $POLICY_NAME to?"
+            echo "Enter the names and separate each with a space"
+            read -a QOS_MULTIPLE_GATEWAY_NAMES
+            QOS_GATEWAY_NAME=$(printf '%s ' "${QOS_MULTIPLE_GATEWAY_NAMES[@]}")
+            echo -e "\\nGoing to install $POLICY_NAME to: $QOS_GATEWAY_NAME"
+            read -p "Are these the correct Gateways/Clusters? (y/n) [n]? " CORRECT_QOS_GWS
+            case "$CORRECT_QOS_GWS" in
+                [yY][eE][sS]|[yY])
+                    echo -e "\\nUsing $QOS_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+                *)
+                    echo -e "\\nPlease enter the right Gateway/Cluster names\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+        done
+    else
+        while [[ "$QOS_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "QOS_GATEWAY_ARRAY_LIST += 1"
+            echo "${QOS_GATEWAY_ARRAY_LIST}. ${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_ARRAY_LIST-1))]}"
+            let "QOS_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+            echo -n "(1-${QOS_GATEWAY_ARRAY_NUMBER_OPTION}): "
+            read QOS_GATEWAY_NUMBER
+            case "$QOS_GATEWAY_NUMBER" in
+                [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                    QOS_GATEWAY_NAME="${QOS_GATEWAY_ARRAY[$((QOS_GATEWAY_NUMBER-1))]}"
+                    if [[ "$ISMDS" == "1" ]]; then
+                        QOS_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
+                    else
+                        QOS_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s floodgate='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$QOS_GATEWAY_NAME"$)
+                    fi
+                    ;;
+                *)
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+            case "$QOS_GATEWAY_NAME" in
+                "")
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+                "$QOS_GATEWAY_NAME_EXIST")
+                    echo "Gateway/Cluster: $QOS_GATEWAY_NAME"
+                    echo -e "\\nUsing $QOS_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+            esac
+        done
+    fi
 }
 
 desktop_gateway_detect()
@@ -612,38 +685,62 @@ desktop_gateway_detect()
     DESKTOP_GATEWAY_ARRAY_NUMBER=$(printf '%s\n' "${DESKTOP_GATEWAY_ARRAY[@]}" | wc -l | awk '{ print $1 }')
     DESKTOP_GATEWAY_ARRAY_NUMBER_OPTION="$DESKTOP_GATEWAY_ARRAY_NUMBER"
     DESKTOP_GATEWAY_ARRAY_LIST=0
-    while [[ "$DESKTOP_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
-        let "DESKTOP_GATEWAY_ARRAY_LIST += 1"
-        echo "${DESKTOP_GATEWAY_ARRAY_LIST}. ${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_ARRAY_LIST-1))]}"
-        let "DESKTOP_GATEWAY_ARRAY_NUMBER -= 1"
-    done
-    while true; do
-        echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
-        echo -n "(1-${DESKTOP_GATEWAY_ARRAY_NUMBER_OPTION}): "
-        read DESKTOP_GATEWAY_NUMBER
-        case "$DESKTOP_GATEWAY_NUMBER" in
-            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
-                DESKTOP_GATEWAY_NAME="${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_NUMBER-1))]}"
-                if [[ "$ISMDS" == "1" ]]; then
-                    DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
-                else
-                    DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
-                fi
-                ;;
-            *)
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-        esac
-        case "$DESKTOP_GATEWAY_NAME" in
-            "")
-                echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
-                continue ;;
-            "$DESKTOP_GATEWAY_NAME_EXIST")
-                echo "Gateway/Cluster: $DESKTOP_GATEWAY_NAME"
-                echo -e "\\nUsing $DESKTOP_GATEWAY_NAME" >> "$SESSION_LOG"
-                break ;;
-        esac
-    done
+    if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+        while [[ "$DESKTOP_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "DESKTOP_GATEWAY_ARRAY_LIST += 1"
+            echo "${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_ARRAY_LIST-1))]}"
+            let "DESKTOP_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat are the names of the Gateways/Clusters you want to install $POLICY_NAME to?"
+            echo "Enter the names and separate each with a space"
+            read -a DESKTOP_MULTIPLE_GATEWAY_NAMES
+            DESKTOP_GATEWAY_NAME=$(printf '%s ' "${DESKTOP_MULTIPLE_GATEWAY_NAMES[@]}")
+            echo -e "\\nGoing to install $POLICY_NAME to: $DESKTOP_GATEWAY_NAME"
+            read -p "Are these the correct Gateways/Clusters? (y/n) [n]? " CORRECT_DESKTOP_GWS
+            case "$CORRECT_DESKTOP_GWS" in
+                [yY][eE][sS]|[yY])
+                    echo -e "\\nUsing $DESKTOP_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+                *)
+                    echo -e "\\nPlease enter the right Gateway/Cluster names\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+        done
+    else
+        while [[ "$DESKTOP_GATEWAY_ARRAY_NUMBER" > "0" ]]; do
+            let "DESKTOP_GATEWAY_ARRAY_LIST += 1"
+            echo "${DESKTOP_GATEWAY_ARRAY_LIST}. ${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_ARRAY_LIST-1))]}"
+            let "DESKTOP_GATEWAY_ARRAY_NUMBER -= 1"
+        done
+        while true; do
+            echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
+            echo -n "(1-${DESKTOP_GATEWAY_ARRAY_NUMBER_OPTION}): "
+            read DESKTOP_GATEWAY_NUMBER
+            case "$DESKTOP_GATEWAY_NUMBER" in
+                [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                    DESKTOP_GATEWAY_NAME="${DESKTOP_GATEWAY_ARRAY[$((DESKTOP_GATEWAY_NUMBER-1))]}"
+                    if [[ "$ISMDS" == "1" ]]; then
+                        DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "$CMA_IP\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
+                    else
+                        DESKTOP_GATEWAY_NAME_EXIST=$(echo -e "localhost\n-t network_objects -s policy_server='installed'\n-q\n" | queryDB_util | awk '/Object Name:/ { print $3 }' | grep ^"$DESKTOP_GATEWAY_NAME"$)
+                    fi
+                    ;;
+                *)
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+            esac
+            case "$DESKTOP_GATEWAY_NAME" in
+                "")
+                    echo -e "\\nError: Number selected is not valid\\nSelect a valid number with a Gateway/Cluster\\nPress CTRL-C to exit the script if needed"
+                    continue ;;
+                "$DESKTOP_GATEWAY_NAME_EXIST")
+                    echo "Gateway/Cluster: $DESKTOP_GATEWAY_NAME"
+                    echo -e "\\nUsing $DESKTOP_GATEWAY_NAME" >> "$SESSION_LOG"
+                    break ;;
+            esac
+        done
+    fi
 }
 
 ###############################################################################
@@ -734,7 +831,11 @@ if [[ "$QUESTION" == "3" ]]; then
             fi
         fi
         echo -en "\\nInstalling Security Policy $POLICY_NAME to $GATEWAY_NAME   "
-        fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/security_policy_install_debug.txt &
+        if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+            fwm -d load "$POLICY_NAME" $GATEWAY_NAME &> "$DBGDIR_FILES"/security_policy_install_debug.txt &
+        else
+            fwm -d load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/security_policy_install_debug.txt &
+        fi
         progress_bar
     elif [[ "$WHICH_POLICY" == "2" ]]; then
         echo "This option will debug Threat Prevention Policy Installation problems"
@@ -758,7 +859,11 @@ if [[ "$QUESTION" == "3" ]]; then
             fi
         fi
         echo -en "\\nInstalling Threat Prevention Policy $POLICY_NAME to $THREAT_GATEWAY_NAME   "
-        fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_prevention_policy_install_debug.txt &
+        if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+            fwm -d load -p threatprevention "$POLICY_NAME" $THREAT_GATEWAY_NAME &> "$DBGDIR_FILES"/threat_prevention_policy_install_debug.txt &
+        else
+            fwm -d load -p threatprevention "$POLICY_NAME" "$THREAT_GATEWAY_NAME" &> "$DBGDIR_FILES"/threat_prevention_policy_install_debug.txt &
+        fi
         progress_bar
     elif [[ "$WHICH_POLICY" == "3" ]]; then
         echo "This option will debug QoS Policy Installation problems"
@@ -782,7 +887,11 @@ if [[ "$QUESTION" == "3" ]]; then
             fi
         fi
         echo -en "\\nInstalling QoS Policy $POLICY_NAME to $QOS_GATEWAY_NAME   "
-        fgate -d load "${POLICY_NAME}.F" "$QOS_GATEWAY_NAME" &> "$DBGDIR_FILES"/qos_policy_install_debug.txt &
+        if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+            fgate -d load "${POLICY_NAME}.F" $QOS_GATEWAY_NAME &> "$DBGDIR_FILES"/qos_policy_install_debug.txt &
+        else
+            fgate -d load "${POLICY_NAME}.F" "$QOS_GATEWAY_NAME" &> "$DBGDIR_FILES"/qos_policy_install_debug.txt &
+        fi
         progress_bar
     elif [[ "$WHICH_POLICY" == "4" ]]; then
         echo "This option will debug Desktop Security Policy Installation problems"
@@ -806,7 +915,11 @@ if [[ "$QUESTION" == "3" ]]; then
             fi
         fi
         echo -en "\\nInstalling Desktop Security Policy $POLICY_NAME to $DESKTOP_GATEWAY_NAME   "
-        fwm -d psload "$FWDIR/conf/${POLICY_NAME}.S" "$DESKTOP_GATEWAY_NAME" &> "$DBGDIR_FILES"/desktop_policy_install_debug.txt &
+        if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+            fwm -d psload "$FWDIR/conf/${POLICY_NAME}.S" $DESKTOP_GATEWAY_NAME &> "$DBGDIR_FILES"/desktop_policy_install_debug.txt &
+        else
+            fwm -d psload "$FWDIR/conf/${POLICY_NAME}.S" "$DESKTOP_GATEWAY_NAME" &> "$DBGDIR_FILES"/desktop_policy_install_debug.txt &
+        fi
         progress_bar
     fi
 fi
@@ -824,7 +937,11 @@ if [[ "$QUESTION" == "4" ]]; then
     fi
     echo -en "\\nInstalling Security Policy $POLICY_NAME to $GATEWAY_NAME   "
     export TDERROR_ALL_PLCY_INST_TIMING=5
-    fwm load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/policy_install_timing_debug.txt &
+    if [[ "$MULTIPLE_INSTALL" == "1" ]]; then
+        fwm load "$POLICY_NAME" $GATEWAY_NAME &> "$DBGDIR_FILES"/policy_install_timing_debug.txt &
+    else
+        fwm load "$POLICY_NAME" "$GATEWAY_NAME" &> "$DBGDIR_FILES"/policy_install_timing_debug.txt &
+    fi
     progress_bar
     unset TDERROR_ALL_PLCY_INST_TIMING
 fi
