@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.1 February 12, 2017
+Version 3.1.1 February 15, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -485,6 +485,7 @@ gateway_detect()
         while true; do
             echo -e "\\nWhat is the number of the Gateway/Cluster you want to install $POLICY_NAME to?"
             echo -n "(1-${GATEWAY_ARRAY_NUMBER_OPTION}): "
+            read GATEWAY_NUMBER
             case "$GATEWAY_NUMBER" in
                 [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
                     GATEWAY_NAME="${GATEWAY_ARRAY[$((GATEWAY_NUMBER-1))]}"
