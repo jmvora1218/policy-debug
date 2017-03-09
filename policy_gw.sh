@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Russell Seifert
+# Russell Seifert, Untitled on Purpose
 # Escalation Engineer - Management Products
 # Check Point Software Technologies Ltd.
 
@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.1 February 12, 2017
+Version 3.1.1 March 9, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -483,6 +483,7 @@ cp -p /var/log/messages* "$DBGDIR_FILES"
 if [[ "$MAJOR_VERSION" == "R80" ]]; then
     section_general_log "dleserver.jar BUILD NUMBER (cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar)"
     cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$GENERAL_LOG"
+    cp -p $FWDIR/state/__tmp/FW1/install_policy_report.txt "$DBGDIR_FILES" 2>&1
 fi
 
 ###############################################################################

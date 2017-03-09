@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Russell Seifert
+# Russell Seifert, Untitled on Purpose
 # Escalation Engineer - Management Products
 # Check Point Software Technologies Ltd.
 
@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.1.1 February 15, 2017
+Version 3.1.1 March 9, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
