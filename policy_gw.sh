@@ -352,7 +352,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" -v "$VSID_SCRIPT" > /dev/null
     if [[ "$?" != "0" ]]; then
-        echo -e "\\nError: Failed to allocate kernel debug buffer\\nPlease run this script again and define a smaller buffer\\n./$SCRIPTNAME -b\\n"
+        echo -e "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER\\nAvailable buffer: $VMALLOC_FREE\\nPlease follow sk84700 to increase the Vmalloc\\nOr run this script again and define a smaller buffer\\n./$SCRIPTNAME -b\\n"
         clean_up
         exit 1
     fi
@@ -388,7 +388,7 @@ if [[ "$ISVSX" != *"1"* ]]; then
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" > /dev/null
     if [[ "$?" != "0" ]]; then
-        echo -e "\\nError: Failed to allocate kernel debug buffer\\nPlease run this script again and define a smaller buffer\\n./$SCRIPTNAME -b\\n"
+        echo -e "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER\\nAvailable buffer: $VMALLOC_FREE\\nPlease follow sk84700 to increase the Vmalloc\\nOr run this script again and define a smaller buffer\\n./$SCRIPTNAME -b\\n"
         clean_up
         exit 1
     fi
