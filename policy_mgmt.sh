@@ -1219,11 +1219,26 @@ if [[ "$MAJOR_VERSION" == "R80" ]]; then
     cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$GENERAL_LOG"
 fi
 
-cpstat os -f all > "$DBGDIR_FILES"/cpstatos.txt
-ifconfig -a > "$DBGDIR_FILES"/ifconfig.txt
-netstat -rn > "$DBGDIR_FILES"/routes.txt
-netstat -anp > "$DBGDIR_FILES"/sockets.txt
-ps auxww > "$DBGDIR_FILES"/psauxww.txt
+section_files_log()
+{
+    SEP="***********************"
+    $ECHO "$SEP $1 $SEP\\n" >> "$2"
+}
+
+section_files_log "(cpstat os -f all)" "$DBGDIR_FILES/cpstatos.txt"
+cpstat os -f all >> "$DBGDIR_FILES"/cpstatos.txt
+
+section_files_log "(ifconfig -a)" "$DBGDIR_FILES/ifconfig.txt"
+ifconfig -a >> "$DBGDIR_FILES"/ifconfig.txt
+
+section_files_log "(netstat -rn)" "$DBGDIR_FILES/routes.txt"
+netstat -rn >> "$DBGDIR_FILES"/routes.txt
+
+section_files_log "(netstat -anp)" "$DBGDIR_FILES/sockets.txt"
+netstat -anp >> "$DBGDIR_FILES"/sockets.txt
+
+section_files_log "(ps auxww)" "$DBGDIR_FILES/psauxww.txt"
+ps auxww >> "$DBGDIR_FILES"/psauxww.txt
 
 cp -p /var/log/messages* "$DBGDIR_FILES"
 
