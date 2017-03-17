@@ -267,6 +267,27 @@ if [[ "$ISMDS" == "1" ]]; then
 fi
 
 ###############################################################################
+# CHECK FWM STATUS
+###############################################################################
+if [[ "$ISMDS" == "1" ]]; then
+    FWM_STATUS=$(ps aux | grep $CMA_NAME | grep fwm | grep -v grep)
+    if [[ -z "$FWM_STATUS" ]]; then
+        $ECHO "\\nError: FWM is not running for $CMA_NAME"
+        $ECHO "Verify FWM is up and running\\n"
+        clean_up
+        exit 1
+    fi
+else
+    FWM_STATUS=$(ps aux | grep fwm | grep -v grep)
+    if [[ -z "$FWM_STATUS" ]]; then
+        $ECHO "\\nError: FWM is not running"
+        $ECHO "Verify FWM is up and running\\n"
+        clean_up
+        exit 1
+    fi
+fi
+
+###############################################################################
 # ASK USER WHAT TO DEBUG
 ###############################################################################
 echo_shell_log "\\n--------DEBUGS AVAILABLE--------\\n"
@@ -388,7 +409,7 @@ global_policy_detect()
         let "GLOBAL_POLICY_ARRAY_NUMBER -= 1"
     done
     while true; do
-        $ECHO "\\nWhat is the name of the Global Policy you want to debug?"
+        $ECHO "\\nWhat is the number of the Global Policy you want to debug?"
         $ECHO -n "(1-${GLOBAL_POLICY_ARRAY_NUMBER_OPTION}): "
         read GLOBAL_POLICY_NUMBER
         case "$GLOBAL_POLICY_NUMBER" in
@@ -438,7 +459,7 @@ mgmt_detect()
         let "MGMT_ARRAY_NUMBER -= 1"
     done
     while true; do
-        $ECHO "\\nWhat is the name of the Management you want to Install Database to?"
+        $ECHO "\\nWhat is the number of the Management you want to Install Database to?"
         $ECHO -n "(1-${MGMT_ARRAY_NUMBER_OPTION}): "
         read MGMT_NUMBER
         case "$MGMT_NUMBER" in
