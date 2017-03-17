@@ -1,8 +1,12 @@
 GETTING STARTED:
 
-These scripts will debug Policy Installation. There is one for the Management and the other is for the Gateway. They will also gather basic information from the machine (disk space, free memory, running processes, hotfixes, etc.) and file relevant to policy installation failures.
+These scripts will debug Policy Installation.
+There is one for the Management and the other is for the Gateway.
+They will also gather basic information from the machine (disk space,
+free memory, running processes, hotfixes, etc.) and other files relevant.
 
-When the script is finished running, all the debug files will be compressed into a tgz file. The script will then print the location of the tgz. 
+When the script is finished running, all the files will be compressed
+The script will then print the location of the tgz. 
 
 
 
@@ -52,15 +56,20 @@ FLAGS FOR BOTH SCRIPTS:
 
 # ./SCRIPT_NAME -d
 
-If the script itself is failing or not working, it can be debugged. Debug output will be on the screen and in a log file. The log file will be named 'script_debug.txt' which will be created in the current working directory.
+If the script itself is failing or not working, it can be debugged. 
+Debug output will be on the screen and in a log file named, 'script_debug.txt.
+The log file will be created same directory as the script.
 
 # ./SCRIPT_NAME -f
 
-This will enable more debugging flags. To see what the additional flags are, refer to each scripts' flags section.
+This will enable more debugging flags.
+To see what the additional flags are, refer to each scripts' flags section.
 
 # ./SCRIPT_NAME -s
 
-The minimum disk space check will be disabled and all debug files will be written to /var/log/tmp/policy-debug. This option is not recommended to be enabled, but is available in case it is needed.
+The minimum disk space check will be disabled and all debug files will be
+written to /var/log/tmp/policy-debug.
+This option is not recommended to be enabled, but is available in case it is needed.
 
 # ./SCRIPT_NAME -v
 
@@ -76,7 +85,9 @@ This will enable "export TDERROR_ALL_ALL=5" on all debugs except slow policy ins
 
 # ./SCRIPT_NAME -m
 
-Debug installing policy to more than one Gateway or Cluster. The script will ask for the names of the Gateways or Clusters. Enter their names separated with a space. Example: Gateway1 ClusterA
+Debug installing policy to more than one Gateway or Cluster.
+The script will ask for the names of the Gateways or Clusters.
+Enter their names separated with a space. Example: Gateway1 ClusterA
 
 
 
@@ -84,18 +95,28 @@ GATEWAY SCRIPT FLAGS:
 
 # ./SCRIPT_NAME -b
 
-Manually define the kernel debug buffer. The script will use 32000 for the buffer by default. If the Gateway fails to allocate a 32MB buffer, it can be manually defined. 
+Manually define the kernel debug buffer.
+The script will use 32000 for the buffer by default.
+If the Gateway fails to allocate a 32MB buffer, it can be manually defined. 
 
 # ./SCRIPT_NAME -f
 
-This will enable more kernel debugging flags. The script will only run 'fw ctl debug -m fw + filter ioctl' by default. If this option is enabled, the below commands are run:
+This will enable more kernel debugging flags.
+The script will only run 'fw ctl debug -m fw + filter ioctl' by default.
+If this option is enabled, the below commands are run:
 
 fw ctl debug -m fw + filter ioctl cmi 
 fw ctl debug -m WS + error warning 
 fw ctl debug -m cmi_loader + error warning policy info 
 fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm
 
-These additional flags will use more CPU and memory to run. This may cause some loaded Gateways to stop responding or crash. Run this flag only in a maintenance window.
+These additional flags will use more CPU and memory to run.
+This may cause some loaded Gateways to stop responding or crash.
+Run this flag only in a maintenance window.
 
 
 
+RELEVANT FILES:
+
+session.log - script log showing any options chosen and debug syntax used.
+general.txt - basic information from the machine.
