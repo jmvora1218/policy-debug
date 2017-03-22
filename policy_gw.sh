@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.2 March 17, 2017
+Version 3.2.1 March 22, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -269,7 +269,7 @@ fi
 ###############################################################################
 if [[ "$DEBUG_BUFFER_ON" == "1" ]]; then
     while true; do
-        $ECHO "\\n\\nWhat size in kilobytes do you want the kernel debug buffer? [4000-32768]"
+        $ECHO "\\nWhat size in kilobytes do you want the kernel debug buffer? [4000-32768]"
         read DEBUG_BUFFER
         case "$DEBUG_BUFFER" in
             [4-9][0-9][0-9][0-9]|[1-9][0-9][0-9][0-9][0-9])
@@ -337,14 +337,14 @@ starting_debug()
 {
     if [[ "$IS61K" != "Failed to find the value" ]]; then
         if [[ "$ISVSX" == *"1"* ]]; then
-            echo_shell_log "\\n\\n----Starting debug on Chassis $IS61K Blade $BLADEID VS ${VSID_SCRIPT}----\\n"
+            echo_shell_log "\\n\\n----STARTING DEBUG ON CHASSIS $IS61K BLADE $BLADEID VS ${VSID_SCRIPT}----\\n"
         else
-            echo_shell_log "\\n\\n----Starting debug on Chassis $IS61K Blade $BLADEID----\\n"
+            echo_shell_log "\\n\\n----STARTING DEBUG ON CHASSIS $IS61K BLADE $BLADEID----\\n"
         fi
     elif [[ "$ISVSX" == *"1"* ]]; then
-        echo_shell_log "\\n\\n----Starting debug on VS ${VSID_SCRIPT}----\\n"
+        echo_shell_log "\\n\\n----STARTING DEBUG ON VS ${VSID_SCRIPT}----\\n"
     else
-        echo_shell_log "\\n----Starting debug----\\n"
+        echo_shell_log "\\n----STARTING DEBUG----\\n"
     fi
 
     DEBUG_DATE=$(/bin/date "+%d %b %Y %H:%M:%S %z")
@@ -391,7 +391,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
         fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl cmi > /dev/null
         fw ctl debug -v "$VSID_SCRIPT" -m WS + error warning > /dev/null
         fw ctl debug -v "$VSID_SCRIPT" -m cmi_loader + error warning policy info > /dev/null
-        fw ctl debug -v "$VSID_SCRIPT" -m kiss + error warning htab ghtab mtctx salloc pm > /dev/null
+        fw ctl debug -v "$VSID_SCRIPT" -m kiss + error warning htab ghtab mtctx salloc pm thinnfa > /dev/null
         fw ctl kdebug -v "$VSID_SCRIPT" -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug_VS"$VSID_SCRIPT".txt &
         echo_log "\\nRunning:"
         echo_log "fw ctl debug 0"
@@ -399,7 +399,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
         echo_log "fw ctl debug -v $VSID_SCRIPT -m fw + filter ioctl cmi"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m WS + error warning"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m cmi_loader + error warning policy info"
-        echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + error warning htab ghtab mtctx salloc pm"
+        echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + error warning htab ghtab mtctx salloc pm thinnfa"
     fi
     echo_log "fw ctl kdebug -v $VSID_SCRIPT -T -f &> kernel_atomic_debug_VS$VSID_SCRIPT.txt"
     echo_log "\\nexport TDERROR_ALL_ALL=5"
@@ -445,7 +445,7 @@ if [[ "$ISVSX" != *"1"* ]]; then
         fw ctl debug -m fw + filter ioctl cmi > /dev/null
         fw ctl debug -m WS + error warning > /dev/null
         fw ctl debug -m cmi_loader + error warning policy info > /dev/null
-        fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm > /dev/null
+        fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa > /dev/null
         fw ctl kdebug -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug.txt &
         echo_log "\\nRunning:"
         echo_log "fw ctl debug 0"
@@ -453,7 +453,7 @@ if [[ "$ISVSX" != *"1"* ]]; then
         echo_log "fw ctl debug -m fw + filter ioctl cmi"
         echo_log "fw ctl debug -m WS + error warning"
         echo_log "fw ctl debug -m cmi_loader + error warning policy info"
-        echo_log "fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm"
+        echo_log "fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa"
     fi
     echo_log "fw ctl kdebug -T -f &> kernel_atomic_debug.txt"
     echo_log "\\nexport TDERROR_ALL_ALL=5"
@@ -537,8 +537,11 @@ enabled_blades >> "$GENERAL_LOG" 2>&1
 section_general_log "IPS STATUS (ips stat)"
 ips stat >> "$GENERAL_LOG" 2>&1
 
-section_general_log "CLUSTERXL STATUS (cphaprob stat)"
-cphaprob stat >> "$GENERAL_LOG" 2>&1
+section_general_log "STRING_DICTIONARY_TABLE SIZE (fw tab -t string_dictionary_table -s)"
+fw tab -t string_dictionary_table -s >> "$GENERAL_LOG"
+
+section_general_log "STRING_DICTIONARY_TABLE LIMIT (fw tab -t string_dictionary_table | grep limit)"
+fw tab -t string_dictionary_table | grep limit >> "$GENERAL_LOG"
 
 section_general_log "CORE DUMPS"
 $ECHO "/var/crash" >> "$GENERAL_LOG"
@@ -587,6 +590,9 @@ section_files_log()
 section_files_log "(cpstat os -f all)" "$DBGDIR_FILES/cpstatos.txt"
 cpstat os -f all >> "$DBGDIR_FILES"/cpstatos.txt
 
+section_files_log "(cpstat ha -f all)" "$DBGDIR_FILES/clusterxl.txt"
+cpstat ha -f all >> "$DBGDIR_FILES"/clusterxl.txt 2>&1
+
 section_files_log "(ifconfig -a)" "$DBGDIR_FILES/ifconfig.txt"
 ifconfig -a >> "$DBGDIR_FILES"/ifconfig.txt
 
@@ -602,6 +608,9 @@ ps auxww >> "$DBGDIR_FILES"/psauxww.txt
 section_files_log "(fw ctl pstat)" "$DBGDIR_FILES/pstat.txt"
 fw ctl pstat >> "$DBGDIR_FILES"/pstat.txt
 
+if [[ -f "$FWDIR/boot/modules/fwkern.conf" ]]; then
+    cp -p $FWDIR/boot/modules/fwkern.conf* "$DBGDIR_FILES"
+fi
 cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
 cp -p /var/log/messages* "$DBGDIR_FILES"
 
