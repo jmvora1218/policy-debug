@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.2.1 March 22, 2017
+Version 3.2.2 March 27, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -299,7 +299,8 @@ if [[ "$DEBUG_BUFFER_ON" == "1" ]]; then
                 if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )); then
                     $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
                     $ECHO "Available buffer: $VMALLOC_FREE"
-                    $ECHO "Please define a smaller buffer or follow sk84700 to increase the Vmalloc"
+                    $ECHO "Please define a smaller kernel debug buffer"
+                    $ECHO "Or follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
                     $ECHO "Press CTRL-C to exit the script if needed"
                     continue
                 fi
@@ -322,7 +323,7 @@ else
     if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )); then
         $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
         $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Please follow sk84700 to increase the Vmalloc"
+        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
         $ECHO "Or run this script again and define a smaller buffer"
         $ECHO "./$SCRIPTNAME -b\\n"
         clean_up
@@ -374,7 +375,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
     if [[ "$?" != "0" ]]; then
         $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
         $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Please follow sk84700 to increase the Vmalloc"
+        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
         $ECHO "Or run this script again and define a smaller buffer"
         $ECHO "./$SCRIPTNAME -b\\n"
         clean_up
@@ -428,7 +429,7 @@ if [[ "$ISVSX" != *"1"* ]]; then
     if [[ "$?" != "0" ]]; then
         $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
         $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Please follow sk84700 to increase the Vmalloc"
+        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
         $ECHO "Or run this script again and define a smaller buffer"
         $ECHO "./$SCRIPTNAME -b\\n"
         clean_up
