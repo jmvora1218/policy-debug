@@ -57,7 +57,7 @@ FLAGS FOR BOTH SCRIPTS:
 # ./SCRIPT_NAME -d
 
 If the script itself is failing or not working, it can be debugged. 
-Debug output will be on the screen and in a log file named, 'script_debug.txt.
+Debug output will be on the screen and in a log file named, 'script_debug.txt'.
 The log file will be created same directory as the script.
 
 # ./SCRIPT_NAME -f
@@ -108,7 +108,7 @@ If this option is enabled, the below commands are run:
 fw ctl debug -m fw + filter ioctl cmi 
 fw ctl debug -m WS + error warning 
 fw ctl debug -m cmi_loader + error warning policy info 
-fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm
+fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa
 
 These additional flags will use more CPU and memory to run.
 This may cause some loaded Gateways to stop responding or crash.
