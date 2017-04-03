@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.2.2 March 27, 2017
+Version 3.2.3 April 3, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -383,11 +383,13 @@ if [[ "$ISVSX" == *"1"* ]]; then
     fi
     if [[ "$MORE_DEBUG_FLAGS" != "1" ]]; then
         fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl > /dev/null
+        fw ctl debug -v "$VSID_SCRIPT" -m kiss + salloc thinnfa > /dev/null
         fw ctl kdebug -v "$VSID_SCRIPT" -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug_VS"$VSID_SCRIPT".txt &
         echo_log "\\nRunning:"
         echo_log "fw ctl debug 0"
         echo_log "fw ctl debug -buf $DEBUG_BUFFER -v $VSID_SCRIPT"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m fw + filter ioctl"
+        echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + salloc thinnfa"
     else
         fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl cmi > /dev/null
         fw ctl debug -v "$VSID_SCRIPT" -m WS + error warning > /dev/null
@@ -437,11 +439,13 @@ if [[ "$ISVSX" != *"1"* ]]; then
     fi
     if [[ "$MORE_DEBUG_FLAGS" != "1" ]]; then
         fw ctl debug -m fw + filter ioctl > /dev/null
+        fw ctl debug -m kiss + salloc thinnfa > /dev/null
         fw ctl kdebug -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug.txt &
         echo_log "\\nRunning:"
         echo_log "fw ctl debug 0"
         echo_log "fw ctl debug -buf $DEBUG_BUFFER"
         echo_log "fw ctl debug -m fw + filter ioctl"
+        echo_log "fw ctl debug -m kiss + salloc thinnfa"
     else
         fw ctl debug -m fw + filter ioctl cmi > /dev/null
         fw ctl debug -m WS + error warning > /dev/null

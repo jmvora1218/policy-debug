@@ -102,8 +102,12 @@ If the Gateway fails to allocate a 32MB buffer, it can be manually defined.
 # ./SCRIPT_NAME -f
 
 This will enable more kernel debugging flags.
-The script will only run 'fw ctl debug -m fw + filter ioctl' by default.
-If this option is enabled, the below commands are run:
+The script will only run the below commands by default:
+
+fw ctl debug -m fw + filter ioctl
+fw ctl debug -m kiss + salloc thinnfa
+
+If this option is enabled, the below commands are run instead:
 
 fw ctl debug -m fw + filter ioctl cmi 
 fw ctl debug -m WS + error warning 
