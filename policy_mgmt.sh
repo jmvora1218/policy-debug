@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.2 March 17, 2017
+Version 3.2.1 April 7, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -1299,9 +1299,9 @@ fi
 # COMPRESS FILES FOR FINAL ARCHIVE
 ###############################################################################
 HOST_DTS=($(hostname)_at_$(date +%Y-%m-%d_%Hh%Mm%Ss))
-FINAL_ARCHIVE="$DBGDIR"/debug_of_"$HOST_DTS".tgz
+FINAL_ARCHIVE="$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz
 $ECHO "Compressing files..."
-tar czf "$DBGDIR"/debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
+tar czf "$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
 if [[ "$?" == "0" ]]; then
     $ECHO "Please send back file: $FINAL_ARCHIVE\\n"
     exit 0

@@ -21,7 +21,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.2.3 April 3, 2017
+Version 3.2.4 April 7, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -623,9 +623,9 @@ cp -p /var/log/messages* "$DBGDIR_FILES"
 # COMPRESS FILES FOR FINAL ARCHIVE
 ###############################################################################
 HOST_DTS=($(hostname)_at_$(date +%Y-%m-%d_%Hh%Mm%Ss))
-FINAL_ARCHIVE="$DBGDIR"/debug_of_"$HOST_DTS".tgz
+FINAL_ARCHIVE="$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz
 $ECHO "Compressing files..."
-tar czf "$DBGDIR"/debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
+tar czf "$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
 if [[ "$?" == "0" ]]; then
     $ECHO "Please send back file: $FINAL_ARCHIVE\\n"
     exit 0
