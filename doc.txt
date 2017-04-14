@@ -64,12 +64,6 @@ The log file will be created same directory as the script.
 This will enable more debugging flags.
 To see what the additional flags are, refer to each scripts' flags section.
 
-# ./SCRIPT_NAME -s
-
-The minimum disk space check will be disabled and all debug files will be
-written to /var/log/tmp/policy-debug.
-This option is not recommended to be enabled, but is available in case it is needed.
-
 # ./SCRIPT_NAME -v
 
 Display the version information of the script.
@@ -87,6 +81,12 @@ This will enable "export TDERROR_ALL_ALL=5" on all debugs except slow policy ins
 Debug installing policy to more than one Gateway or Cluster.
 The script will ask for the names of the Gateways or Clusters.
 Enter their names separated with a space. Example: Gateway1 ClusterA
+
+# ./SCRIPT_NAME -s
+
+The minimum disk space check will be disabled and all debug files will be
+written to /var/log/tmp/policy-debug.
+This option is not recommended to be enabled, but is available in case it is needed.
 
 
 
@@ -120,7 +120,7 @@ Run this flag only in a maintenance window.
 # ./SCRIPT_NAME -s
 
 The minimum disk space check will be disabled and all debug files will be
-written to /logs/policy-debug.
+written to /var/log/tmp/policy-debug or /logs/policy-debug if SG80.
 This option is not recommended to be enabled, but is available in case it is needed.
 
 
