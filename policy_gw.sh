@@ -14,14 +14,13 @@ HELP_USAGE="Usage: $0 [OPTIONS]
    -d    debug this script. a log file named 'script_debug.txt' will be
            created in the current working directory
    -f    enable more kernel debug flags
-   -s    disable minimum disk space check. files will be written
-           to /var/log/tmp/policy-debug
+   -s    disable minimum disk space check
    -v    version information
 "
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.2.4 April 7, 2017
+Version 3.3 April 14, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -32,7 +31,7 @@ while getopts ':h-:b-:d-:f-:s-:v-:' HELP_OPTION; do
         b) DEBUG_BUFFER_ON=1 ;;
         d) set -vx ; exec &> >(tee script_debug.txt) ;;
         f) MORE_DEBUG_FLAGS=1 ;;
-        m) SPACE_CHECK_OFF=1 ;;
+        s) SPACE_CHECK_OFF=1 ;;
         v) echo "$HELP_VERSION" ; exit ;;
         \?) printf "Invalid option: -%s\n" "$OPTARG" >&2
             echo "$HELP_USAGE" >&2 ; exit 1 ;;
@@ -104,13 +103,6 @@ if [[ $($CPDIR/bin/cpprod_util FwIsVSX 2> /dev/null) == *"1"* ]]; then
     fi
 fi
 
-if [[ $($CPDIR/bin/cpprod_util CPPROD_GetValue Products SG80 1) == *"1"* ]]; then
-    echo -e "\\nError: This is an SG80 Gateway"
-    echo -e "This script is not supported on SG80"
-    echo -e "Please find an alternate method to debug Policy Installation\\n"
-    exit 1
-fi
-
 ###############################################################################
 # BASIC VARIABLES
 ###############################################################################
@@ -120,28 +112,40 @@ FILES="$SCRIPTNAME"_files.$$
 MAJOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared VersionText 1)
 ISVSX=$($CPDIR/bin/cpprod_util FwIsVSX 2> /dev/null)
 IS61K=$($CPDIR/bin/cpprod_util CPPROD_GetValue ASG_CHASSIS ChassisID 1 2> /dev/null)
+ISSG80=$($CPDIR/bin/cpprod_util CPPROD_GetValue Products SG80 1 2> /dev/null)
 
 ###############################################################################
-# CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
+# CREATE TEMPORARY DIRECTORIES
 ###############################################################################
-if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
-    DBGDIR=/var/log/tmp/policy-debug
-    DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
-    if [[ ! -d "$DBGDIR_FILES" ]]; then
-        mkdir -p "$DBGDIR_FILES"
-    else
-        rm -rf "$DBGDIR_FILES"
-        mkdir -p "$DBGDIR_FILES"
-    fi
-else
-    if [[ $(df -P | grep /$ | awk '{ print $4 }') -lt "2000000" ]]; then
-        if [[ $(df -P | egrep "/var$|/var/log$" | awk '{ print $4 }') -lt "2000000" ]]; then
-            $ECHO "\\nError: There is not enough disk space available"
-            $ECHO "Please follow sk60080 to clear disk space\\n"
-            exit 1
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
+        DBGDIR=/var/log/tmp/policy-debug
+        DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
+        if [[ ! -d "$DBGDIR_FILES" ]]; then
+            mkdir -p "$DBGDIR_FILES"
         else
-            DBGDIR=/var/log/tmp/policy-debug
-            DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
+            rm -rf "$DBGDIR_FILES"
+            mkdir -p "$DBGDIR_FILES"
+        fi
+    else
+        if [[ $(df -P | grep /$ | awk '{ print $4 }') -lt "2000000" ]]; then
+            if [[ $(df -P | egrep "/var$|/var/log$" | awk '{ print $4 }') -lt "2000000" ]]; then
+                $ECHO "\\nError: There is not enough disk space available"
+                $ECHO "Please follow sk60080 to clear disk space\\n"
+                exit 1
+            else
+                DBGDIR=/var/log/tmp/policy-debug
+                DBGDIR_FILES=/var/log/tmp/policy-debug/"$FILES"
+                if [[ ! -d "$DBGDIR_FILES" ]]; then
+                    mkdir -p "$DBGDIR_FILES"
+                else
+                    rm -rf "$DBGDIR_FILES"
+                    mkdir -p "$DBGDIR_FILES"
+                fi
+            fi
+        else
+            DBGDIR=/tmp/policy-debug
+            DBGDIR_FILES=/tmp/policy-debug/"$FILES"
             if [[ ! -d "$DBGDIR_FILES" ]]; then
                 mkdir -p "$DBGDIR_FILES"
             else
@@ -149,14 +153,44 @@ else
                 mkdir -p "$DBGDIR_FILES"
             fi
         fi
-    else
-        DBGDIR=/tmp/policy-debug
-        DBGDIR_FILES=/tmp/policy-debug/"$FILES"
+    fi
+fi
+
+if [[ "$ISSG80" == *"1"* ]]; then
+    if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
+        DBGDIR=/logs/policy-debug
+        DBGDIR_FILES=/logs/policy-debug/"$FILES"
         if [[ ! -d "$DBGDIR_FILES" ]]; then
             mkdir -p "$DBGDIR_FILES"
         else
             rm -rf "$DBGDIR_FILES"
             mkdir -p "$DBGDIR_FILES"
+        fi
+    else
+        if [[ $(df | grep "/logs" | awk '{ print $4 }') -lt "10000" ]]; then
+            if [[ $(df | grep "/storage" | awk '{ print $4 }') -lt "10000" ]]; then
+                $ECHO "\\nError: There is not enough disk space available"
+                $ECHO "Please follow sk60080 to clear disk space\\n"
+                exit 1
+            else
+                DBGDIR=/storage/tmp/policy-debug
+                DBGDIR_FILES=/storage/tmp/policy-debug/"$FILES"
+                if [[ ! -d "$DBGDIR_FILES" ]]; then
+                    mkdir -p "$DBGDIR_FILES"
+                else
+                    rm -rf "$DBGDIR_FILES"
+                    mkdir -p "$DBGDIR_FILES"
+                fi
+            fi
+        else
+            DBGDIR=/logs/policy-debug
+            DBGDIR_FILES=/logs/policy-debug/"$FILES"
+            if [[ ! -d "$DBGDIR_FILES" ]]; then
+                mkdir -p "$DBGDIR_FILES"
+            else
+                rm -rf "$DBGDIR_FILES"
+                mkdir -p "$DBGDIR_FILES"
+            fi
         fi
     fi
 fi
@@ -164,40 +198,44 @@ fi
 ###############################################################################
 # PROCESS CLEANUP AND TERMINATION SIGNALS
 ###############################################################################
-interrupted()
-{
-    $ECHO "\\n\\nError: Script interrupted, cleaning temporary files..."
-    unset TDERROR_ALL_ALL
-    fw ctl debug 0 1> /dev/null
-    pkill -P $$
-    rm -rf "$DBGDIR_FILES"
-    $ECHO "Completed\\n"
-    exit 1
-}
-trap interrupted SIGHUP SIGINT SIGTERM # 1 2 15
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    interrupted()
+    {  
+        $ECHO "\\n\\nError: Script interrupted, cleaning temporary files..."
+        unset TDERROR_ALL_ALL
+        fw ctl debug 0 1> /dev/null
+        pkill -P $$
+        rm -rf "$DBGDIR_FILES"
+        $ECHO "Completed\\n"
+        exit 1
+    }
+    trap interrupted SIGHUP SIGINT SIGTERM # 1 2 15
 
-clean_up()
-{
-    pkill -P $$
-    rm -rf "$DBGDIR_FILES"
-}
-trap clean_up EXIT # 0
+    clean_up()
+    {
+        pkill -P $$
+        rm -rf "$DBGDIR_FILES"
+    }
+    trap clean_up EXIT # 0
+fi
 
 ###############################################################################
 # MONITOR DISK SPACE USAGE
 ###############################################################################
-disk_space_check()
-{
-    while true; do
-        DISKCHECK=$(df -P $DBGDIR | grep / | awk '{print $4}')
-        if [[ "$DISKCHECK" -lt "500000" ]]; then
-            $ECHO -n "\\n\\nError: Disk space is less than 500MB. Stopping debug..."
-            kill -15 $$
-        fi
-    sleep 20
-    done
-}
-disk_space_check &
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    disk_space_check()
+    {
+        while true; do
+            DISKCHECK=$(df -P $DBGDIR | grep / | awk '{print $4}')
+            if [[ "$DISKCHECK" -lt "500000" ]]; then
+                $ECHO -n "\\n\\nError: Disk space is less than 500MB. Stopping debug..."
+                kill -15 $$
+            fi
+        sleep 20
+        done
+    }
+    disk_space_check &
+fi
 
 ###############################################################################
 # START SCRIPT SESSION LOG
@@ -465,16 +503,24 @@ if [[ "$ISVSX" != *"1"* ]]; then
     echo_log "fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> fetch_local_debug.txt"
     
     $ECHO -n "Fetching local policy   "
-    $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-    export TDERROR_ALL_ALL=5
-    fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
-    progress_bar
-    unset TDERROR_ALL_ALL
-    $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-    $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
+
+    if [[ "$ISSG80" == "Failed to find the value" ]]; then
+        $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+        cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+        export TDERROR_ALL_ALL=5
+        fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
+        progress_bar
+        unset TDERROR_ALL_ALL
+        $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+        cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+        $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+        grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
+    else
+        export TDERROR_ALL_ALL=5
+        fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
+        progress_bar
+        unset TDERROR_ALL_ALL
+    fi
 fi
 
 ###############################################################################
@@ -498,46 +544,64 @@ section_general_log()
     $ECHO "$SEP $1 $SEP" >> "$GENERAL_LOG"
 }
 
-section_general_log "MACHINE DETAILS (clish -c \"show asset all\")"
-if [[ -f "/bin/clish" ]]; then
-    clish -c "lock database override" &> /dev/null
-    clish -c "show asset all" >> "$GENERAL_LOG" 2>&1
-else
-    $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
-    $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
-fi
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_general_log "MACHINE DETAILS (clish -c \"show asset all\")"
+    if [[ -f "/bin/clish" ]]; then
+        clish -c "lock database override" &> /dev/null
+        clish -c "show asset all" >> "$GENERAL_LOG" 2>&1
+    else
+        $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
+        $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
+    fi
 
-section_general_log "VERSION (clish -c \"show version all\")"
-if [[ -f "/bin/clish" ]]; then
-    clish -c "lock database override" &> /dev/null
-    clish -c "show version all" >> "$GENERAL_LOG" 2>&1
+    section_general_log "VERSION (clish -c \"show version all\")"
+    if [[ -f "/bin/clish" ]]; then
+        clish -c "lock database override" &> /dev/null
+        clish -c "show version all" >> "$GENERAL_LOG" 2>&1
+    else
+        $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
+        $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
+    fi
 else
-    $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
-    $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
+    section_general_log "VERSION (ver)"
+    ver >> "$GENERAL_LOG"
 fi
 
 section_general_log "SYSTEM INFO (uname -a)"
 uname -a >> "$GENERAL_LOG"
 
-section_general_log "CPU (cat /proc/cpuinfo | grep processor | wc -l)"
+section_general_log "CPU (cat /proc/cpuinfo | egrep \"^processor|^Processor\" | wc -l)"
 $ECHO -n "Total CPU: " >> "$GENERAL_LOG"
-cat /proc/cpuinfo | grep processor | wc -l >> "$GENERAL_LOG"
+cat /proc/cpuinfo | egrep "^processor|^Processor" | wc -l >> "$GENERAL_LOG"
 
-section_general_log "MEMORY (free -m -t)"
-free -m -t >> "$GENERAL_LOG"
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_general_log "MEMORY (free -m -t)"
+    free -m -t >> "$GENERAL_LOG" 2>&1
 
-section_general_log "DISK SPACE (df -haT)"
-df -haT >> "$GENERAL_LOG"
+    section_general_log "DISK SPACE (df -haT)"
+    df -haT >> "$GENERAL_LOG" 2>&1
 
-section_general_log "TOP (top -bn1 -p 0)"
-top -bn1 -p 0 2>&1 | head -5 >> "$GENERAL_LOG"
+    section_general_log "TOP (top -bn1 -p 0)"
+    top -bn1 -p 0 2>&1 | head -5 >> "$GENERAL_LOG"
+else
+    section_general_log "MEMORY (free)"
+    free >> "$GENERAL_LOG" 2>&1
+
+    section_general_log "DISK SPACE (df -h)"
+    df -h >> "$GENERAL_LOG" 2>&1
+
+    section_general_log "TOP (top -n1)"
+    top -n1 2>&1 | head -5 >> "$GENERAL_LOG"
+fi
 
 section_general_log "TIME (hwclock and ntpstat)"
 hwclock >> "$GENERAL_LOG"
 ntpstat >> "$GENERAL_LOG" 2>&1
 
-section_general_log "ENABLED BLADES (enabled_blades)"
-enabled_blades >> "$GENERAL_LOG" 2>&1
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_general_log "ENABLED BLADES (enabled_blades)"
+    enabled_blades >> "$GENERAL_LOG" 2>&1
+fi
 
 section_general_log "IPS STATUS (ips stat)"
 ips stat >> "$GENERAL_LOG" 2>&1
@@ -548,36 +612,43 @@ fw tab -t string_dictionary_table -s >> "$GENERAL_LOG"
 section_general_log "STRING_DICTIONARY_TABLE LIMIT (fw tab -t string_dictionary_table | grep limit)"
 fw tab -t string_dictionary_table | grep limit >> "$GENERAL_LOG"
 
-section_general_log "CORE DUMPS"
-$ECHO "/var/crash" >> "$GENERAL_LOG"
-ls -lhA /var/crash >> "$GENERAL_LOG" 2>&1
-$ECHO "/var/log/crash" >> "$GENERAL_LOG"
-ls -lhA /var/log/crash >> "$GENERAL_LOG" 2>&1
-$ECHO "/var/log/dump/usermode" >> "$GENERAL_LOG"
-ls -lhA /var/log/dump/usermode >> "$GENERAL_LOG" 2>&1
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_general_log "CORE DUMPS"
+    $ECHO "/var/crash" >> "$GENERAL_LOG"
+    ls -lhA /var/crash >> "$GENERAL_LOG" 2>&1
+    $ECHO "/var/log/crash" >> "$GENERAL_LOG"
+    ls -lhA /var/log/crash >> "$GENERAL_LOG" 2>&1
+    $ECHO "/var/log/dump/usermode" >> "$GENERAL_LOG"
+    ls -lhA /var/log/dump/usermode >> "$GENERAL_LOG" 2>&1
+else
+    section_general_log "CORE DUMPS (ls -lhA /logs/core)"
+    ls -lhA /logs/core >> "$GENERAL_LOG" 2>&1
+fi
 
 section_general_log "WATCHDOG (cpwd_admin list)"
 cpwd_admin list >> "$GENERAL_LOG"
 
 section_general_log "LICENSES (cplic print -x)"
-cplic print -x >> "$GENERAL_LOG"
+cplic print -x >> "$GENERAL_LOG" 2>&1
 
-section_general_log "HOTFIXES (cpinfo -y all)"
-if [[ "$ISVSX" == *"1"* ]]; then
-    vsenv > /dev/null
-    script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
-    cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
-    vsenv "$VSID_SCRIPT" > /dev/null
-else
-    script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
-    cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
-fi
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_general_log "HOTFIXES (cpinfo -y all)"
+    if [[ "$ISVSX" == *"1"* ]]; then
+        vsenv > /dev/null
+        script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
+        cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+        vsenv "$VSID_SCRIPT" > /dev/null
+    else
+        script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
+        cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+    fi
 
-section_general_log "JUMBO HOTFIX TAKE (installed_jumbo_take)"
-if [[ -e $FWDIR/bin/installed_jumbo_take ]]; then
-    installed_jumbo_take >> "$GENERAL_LOG"
-else
-    $ECHO "Jumbo Hotfix Accumulator is not installed" >> "$GENERAL_LOG"
+    section_general_log "JUMBO HOTFIX TAKE (installed_jumbo_take)"
+    if [[ -e $FWDIR/bin/installed_jumbo_take ]]; then
+        installed_jumbo_take >> "$GENERAL_LOG"
+    else
+        $ECHO "Jumbo Hotfix Accumulator is not installed" >> "$GENERAL_LOG"
+    fi
 fi
 
 if [[ "$MAJOR_VERSION" == "R80" ]]; then
@@ -604,8 +675,13 @@ ifconfig -a >> "$DBGDIR_FILES"/ifconfig.txt
 section_files_log "(netstat -rn)" "$DBGDIR_FILES/routes.txt"
 netstat -rn >> "$DBGDIR_FILES"/routes.txt
 
-section_files_log "(netstat -anp)" "$DBGDIR_FILES/sockets.txt"
-netstat -anp >> "$DBGDIR_FILES"/sockets.txt
+if [[ "$ISSG80" == "Failed to find the value" ]]; then
+    section_files_log "(netstat -anp)" "$DBGDIR_FILES/sockets.txt"
+    netstat -anp >> "$DBGDIR_FILES"/sockets.txt
+else
+    section_files_log "(netstat -an)" "$DBGDIR_FILES/sockets.txt"
+    netstat -an >> "$DBGDIR_FILES"/sockets.txt 2>&1
+fi
 
 section_files_log "(ps auxww)" "$DBGDIR_FILES/psauxww.txt"
 ps auxww >> "$DBGDIR_FILES"/psauxww.txt
@@ -616,6 +692,7 @@ fw ctl pstat >> "$DBGDIR_FILES"/pstat.txt
 if [[ -f "$FWDIR/boot/modules/fwkern.conf" ]]; then
     cp -p $FWDIR/boot/modules/fwkern.conf* "$DBGDIR_FILES"
 fi
+
 cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
 cp -p /var/log/messages* "$DBGDIR_FILES"
 
@@ -625,14 +702,19 @@ cp -p /var/log/messages* "$DBGDIR_FILES"
 HOST_DTS=($(hostname)_at_$(date +%Y-%m-%d_%Hh%Mm%Ss))
 FINAL_ARCHIVE="$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz
 $ECHO "Compressing files..."
-tar czf "$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz --remove-files -C "$DBGDIR" "$FILES"
+tar czf "$DBGDIR"/policy_debug_of_"$HOST_DTS".tgz -C "$DBGDIR" "$FILES"
 if [[ "$?" == "0" ]]; then
+    rm -rf "$DBGDIR_FILES"
     $ECHO "Please send back file: $FINAL_ARCHIVE\\n"
     exit 0
 else
     $ECHO "\\nError: Failed to create archive"
     $ECHO "Consider running this script again with verbose output"
     $ECHO "./$SCRIPTNAME -d\\n"
-    clean_up
+    if [[ "$ISSG80" == "Failed to find the value" ]]; then
+        clean_up
+    else
+        rm -rf "$DBGDIR_FILES"
+    fi
     exit 1
 fi
