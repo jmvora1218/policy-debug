@@ -14,14 +14,13 @@ HELP_USAGE="Usage: $0 [OPTIONS]
            created in the current working directory
    -f    enable more debug flags
    -m    install policy to more than one gateway
-   -s    disable minimum disk space check. files will be written
-           to /var/log/tmp/policy-debug
+   -s    disable minimum disk space check
    -v    version information
 "
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.2.1 April 7, 2017
+Version 3.3 April 14, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -95,7 +94,7 @@ MAJOR_VERSION=$($CPDIR/bin/cpprod_util CPPROD_GetValue CPshared VersionText 1)
 ISMDS=$($CPDIR/bin/cpprod_util CPPROD_GetValue PROVIDER-1 IsConfigured 1 2> /dev/null)
 
 ###############################################################################
-# CREATE TEMPORARY DIRECTORIES ON EITHER ROOT OR /VAR/LOG. 2GB MINIMUM
+# CREATE TEMPORARY DIRECTORIES
 ###############################################################################
 if [[ "$SPACE_CHECK_OFF" == "1" ]]; then
     DBGDIR=/var/log/tmp/policy-debug
