@@ -20,7 +20,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.3 April 14, 2017
+Version 3.3.1 April 19, 2017
 Contribute at <https://github.com/seiruss/policy-debug>
 "
 
@@ -430,6 +430,9 @@ if [[ "$ISVSX" == *"1"* ]]; then
         echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + salloc thinnfa"
     else
         fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl cmi > /dev/null
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            fw ctl debug -v "$VSID_SCRIPT" -m UP + error warning > /dev/null
+        fi
         fw ctl debug -v "$VSID_SCRIPT" -m WS + error warning > /dev/null
         fw ctl debug -v "$VSID_SCRIPT" -m cmi_loader + error warning policy info > /dev/null
         fw ctl debug -v "$VSID_SCRIPT" -m kiss + error warning htab ghtab mtctx salloc pm thinnfa > /dev/null
@@ -438,6 +441,9 @@ if [[ "$ISVSX" == *"1"* ]]; then
         echo_log "fw ctl debug 0"
         echo_log "fw ctl debug -buf $DEBUG_BUFFER -v $VSID_SCRIPT"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m fw + filter ioctl cmi"
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            echo_log "fw ctl debug -v $VSID_SCRIPT -m UP + error warning"
+        fi
         echo_log "fw ctl debug -v $VSID_SCRIPT -m WS + error warning"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m cmi_loader + error warning policy info"
         echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + error warning htab ghtab mtctx salloc pm thinnfa"
@@ -486,6 +492,9 @@ if [[ "$ISVSX" != *"1"* ]]; then
         echo_log "fw ctl debug -m kiss + salloc thinnfa"
     else
         fw ctl debug -m fw + filter ioctl cmi > /dev/null
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            fw ctl debug -m UP + error warning > /dev/null
+        fi
         fw ctl debug -m WS + error warning > /dev/null
         fw ctl debug -m cmi_loader + error warning policy info > /dev/null
         fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa > /dev/null
@@ -494,6 +503,9 @@ if [[ "$ISVSX" != *"1"* ]]; then
         echo_log "fw ctl debug 0"
         echo_log "fw ctl debug -buf $DEBUG_BUFFER"
         echo_log "fw ctl debug -m fw + filter ioctl cmi"
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            echo_log "fw ctl debug -m UP + error warning"
+        fi
         echo_log "fw ctl debug -m WS + error warning"
         echo_log "fw ctl debug -m cmi_loader + error warning policy info"
         echo_log "fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa"
