@@ -20,8 +20,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.3.1 April 19, 2017
-Contribute at <https://github.com/seiruss/policy-debug>
+Version 3.3.2 April 21, 2017
 "
 
 OPTIND=1
