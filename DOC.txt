@@ -1,0 +1,132 @@
+GETTING STARTED:
+
+These scripts will debug Policy Installation.
+There is one for the Management and the other is for the Gateway.
+They will also gather basic information from the machine (disk space,
+free memory, running processes, hotfixes, etc.) and other files relevant.
+
+When the script is finished running, all the files will be compressed
+The script will then print the location of the tgz. 
+
+
+
+SUPPORTED VERSIONS:
+
+Management script is supported on:
+R65 and up
+Gaia and SecurePlatform
+SmartCenter and MDS/Provider-1 which includes Domain/CMA
+
+Gateway script is supported on:
+R65 and up for regular Gateways
+R75.40VS and up for VSX
+61k/41k
+1100, 1400 and other SG80's
+
+
+
+INSTRUCTIONS TO RUN:
+
+1. Upload debug script tar file to a temporary directory.
+
+2. Extract the script.
+  [Expert@HostName]# tar xvf SCRIPT_NAME.tar
+
+3. Run the script.
+  [Expert@HostName]# ./SCRIPT_NAME
+
+Note - Do NOT install policy from SmartConsole while the debug is running. 
+
+4. Answer the questions if asked.
+5. The script will stop automatically when it is finished.
+6. Upload the tgz file using Check Point Uploader on sk108152.
+
+
+
+HELP MENU:
+
+Both scripts have a help menu that shows the optional flags available.
+
+# ./SCRIPT_NAME -h
+
+
+
+FLAGS FOR BOTH SCRIPTS:
+
+# ./SCRIPT_NAME -d
+
+If the script itself is failing or not working, it can be debugged. 
+Debug output will be on the screen and in a log file named, 'script_debug.txt'.
+The log file will be created same directory as the script.
+
+# ./SCRIPT_NAME -f
+
+This will enable more debugging flags.
+To see what the additional flags are, refer to each scripts' flags section.
+
+# ./SCRIPT_NAME -v
+
+Display the version information of the script.
+
+
+
+MANAGEMENT SCRIPT FLAGS:
+
+# ./SCRIPT_NAME -f
+
+This will enable "export TDERROR_ALL_ALL=5" on all debugs except slow policy installation.
+
+# ./SCRIPT_NAME -m
+
+Debug installing policy to more than one Gateway or Cluster.
+The script will ask for the names of the Gateways or Clusters.
+Enter their names separated with a space. Example: Gateway1 ClusterA
+
+# ./SCRIPT_NAME -s
+
+The minimum disk space check will be disabled and all debug files will be
+written to /var/log/tmp/policy-debug.
+This option is not recommended to be enabled, but is available in case it is needed.
+
+
+
+GATEWAY SCRIPT FLAGS:
+
+# ./SCRIPT_NAME -b
+
+Manually define the kernel debug buffer.
+The script will use 32000 for the buffer by default.
+If the Gateway fails to allocate a 32MB buffer, it can be manually defined. 
+
+# ./SCRIPT_NAME -f
+
+This will enable more kernel debugging flags.
+The script will only run the below commands by default:
+
+fw ctl debug -m fw + filter ioctl
+fw ctl debug -m kiss + salloc thinnfa
+
+If this option is enabled, the below commands are run instead:
+
+fw ctl debug -m fw + filter ioctl cmi 
+fw ctl debug -m WS + error warning 
+fw ctl debug -m cmi_loader + error warning policy info 
+fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm thinnfa
+
+These additional flags will use more CPU and memory to run.
+This may cause some loaded Gateways to stop responding or crash.
+Run this flag only in a maintenance window.
+
+# ./SCRIPT_NAME -s
+
+The minimum disk space check will be disabled and all debug files will be
+written to /var/log/tmp/policy-debug or /logs/policy-debug if SG80.
+This option is not recommended to be enabled, but is available in case it is needed.
+
+
+
+RELEVANT FILES:
+
+session.log - script log showing any options chosen and debug syntax used.
+general.txt - basic information from the machine.
+
