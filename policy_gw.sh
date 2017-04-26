@@ -20,7 +20,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Gateway Policy Debug Script
-Version 3.3.2 April 21, 2017
+Version 3.3.3 April 27, 2017
 "
 
 OPTIND=1
@@ -337,7 +337,7 @@ if [[ "$DEBUG_BUFFER_ON" == "1" ]]; then
                     $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
                     $ECHO "Available buffer: $VMALLOC_FREE"
                     $ECHO "Please define a smaller kernel debug buffer"
-                    $ECHO "Or follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
+                    $ECHO "Or follow sk84700 to increase the Vmalloc"
                     $ECHO "Press CTRL-C to exit the script if needed"
                     continue
                 fi
@@ -360,13 +360,23 @@ else
     if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )); then
         $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
         $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
+        $ECHO "Follow sk84700 to increase the Vmalloc"
         $ECHO "Or run this script again and define a smaller buffer"
         $ECHO "./$SCRIPTNAME -b\\n"
         clean_up
         exit 1
     fi
 fi
+
+kernel_memory_used()
+{
+    MEMORY_USED=$(fw ctl pstat | grep "Memory used")
+    $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
+    $ECHO "FW Kernel memory usage is high"
+    $ECHO "$MEMORY_USED\\n"
+    $ECHO "Policy Installation is failing because there is not enough memory"
+    $ECHO "Follow sk101875 Scenario 2 or add more RAM to this Gateway\\n"
+}
 
 ###############################################################################
 # FUNCTIONS FOR MAIN DEBUG
@@ -410,11 +420,7 @@ if [[ "$ISVSX" == *"1"* ]]; then
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" -v "$VSID_SCRIPT" > /dev/null
     if [[ "$?" != "0" ]]; then
-        $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
-        $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
-        $ECHO "Or run this script again and define a smaller buffer"
-        $ECHO "./$SCRIPTNAME -b\\n"
+        kernel_memory_used
         clean_up
         exit 1
     fi
@@ -472,11 +478,7 @@ if [[ "$ISVSX" != *"1"* ]]; then
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" > /dev/null
     if [[ "$?" != "0" ]]; then
-        $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
-        $ECHO "Available buffer: $VMALLOC_FREE"
-        $ECHO "Follow sk84700 to increase the Vmalloc or sk101875 Scenario 2"
-        $ECHO "Or run this script again and define a smaller buffer"
-        $ECHO "./$SCRIPTNAME -b\\n"
+        kernel_memory_used
         clean_up
         exit 1
     fi
