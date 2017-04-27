@@ -20,7 +20,7 @@ HELP_USAGE="Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Management Policy Debug Script
-Version 3.3.2 April 21, 2017
+Version 3.3.3 April 27, 2017
 "
 
 OPTIND=1
@@ -1179,9 +1179,9 @@ fi
 section_general_log "SYSTEM INFO (uname -a)"
 uname -a >> "$GENERAL_LOG"
 
-section_general_log "CPU (cat /proc/cpuinfo | grep processor | wc -l)"
+section_general_log "CPU (cat /proc/cpuinfo | egrep \"^processor\" | wc -l)"
 $ECHO -n "Total CPU: " >> "$GENERAL_LOG"
-cat /proc/cpuinfo | grep processor | wc -l >> "$GENERAL_LOG"
+cat /proc/cpuinfo | egrep "^processor" | wc -l >> "$GENERAL_LOG"
 
 section_general_log "MEMORY (free -m -t)"
 free -m -t >> "$GENERAL_LOG"
