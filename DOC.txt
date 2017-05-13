@@ -1,23 +1,22 @@
 GETTING STARTED:
 
-These scripts will debug Policy Installation.
-There is one for the Management and the other is for the Gateway.
-They will also gather basic information from the machine (disk space,
+This script will debug Policy Installation.
+It will also gather basic information from the machine (disk space,
 free memory, running processes, hotfixes, etc.) and other files relevant.
 
 When the script is finished running, all the files will be compressed
-The script will then print the location of the tgz. 
+and will then print the location of the tgz. 
 
 
 
 SUPPORTED VERSIONS:
 
-Management script is supported on:
+Management servers:
 R65 and up
 Gaia and SecurePlatform
 SmartCenter and MDS/Provider-1 which includes Domain/CMA
 
-Gateway script is supported on:
+Gateways:
 R65 and up for regular Gateways
 R75.40VS and up for VSX
 61k/41k
@@ -27,13 +26,13 @@ R75.40VS and up for VSX
 
 INSTRUCTIONS TO RUN:
 
-1. Upload debug script tar file to a temporary directory.
+1. Upload policy_debug.tar file to a temporary directory.
 
 2. Extract the script.
-  [Expert@HostName]# tar xvf SCRIPT_NAME.tar
+  [Expert@HostName]# tar xvf policy_debug.tar
 
 3. Run the script.
-  [Expert@HostName]# ./SCRIPT_NAME
+  [Expert@HostName]# ./policy_debug.sh
 
 Note - Do NOT install policy from SmartConsole while the debug is running. 
 
