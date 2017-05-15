@@ -463,8 +463,8 @@ debug_mgmt_or_fw()
     echo_shell_log "\\nThis is a Standalone Server"
     echo_shell_log "\\n--------DEBUGS AVAILABLE--------\\n"
 
-    echo_shell_log "1. Management (fwm load)"
-    echo_shell_log "2. Gateway (fetchlocal + kernel)\\n"
+    echo_shell_log "1. Management"
+    echo_shell_log "2. Gateway (load on module failed)\\n"
 
     while true; do
         $ECHO "Which option do you want to debug?"
