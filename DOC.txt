@@ -111,6 +111,7 @@ MANAGEMENT DEBUG SYNTAX:
 Database Installation:
 fwm -d dbload "MGMT_NAME" &> install_database_debug.txt
 
+
 Policy Verification:
 fwm -d verify "POLICY_NAME" &> policy_verify_debug.txt
 
@@ -129,9 +130,11 @@ fgate -d load "POLICY_NAME".F "GATEWAY_NAME" &> qos_policy_install_debug.txt
 Desktop Security:
 fwm -d psload "$FWDIR/conf/POLICY_NAME".S "GATEWAY_NAME" &> desktop_policy_install_debug.txt
 
+
 Slow Policy Install:
 export TDERROR_ALL_PLCY_INST_TIMING=5
 fwm load "POLICY_NAME" "GATEWAY_NAME" &> policy_install_timing_debug.txt
+
 
 Assign Global Policy for R80 and up:
 $MDS_FWDIR/scripts/cpm_debug.sh -t Assign_Global_Policy -s DEBUG
@@ -145,6 +148,8 @@ fwm -d mds fwmconnect -assign -n 10 -g "##GLOBAL_POLICY_NAME" -l "CMA_NAME_._._D
 ###############################################################################
 GATEWAY DEBUG SYNTAX
 ###############################################################################
+
+If the Gateway is VSX, the debug flags will be enabled on the relevant VS.
 
 fw ctl debug -m fw + filter ioctl
 fw ctl debug -m kiss + salloc

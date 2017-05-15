@@ -992,140 +992,67 @@ debug_fw()
 {
     starting_fw_debug
     fw ctl debug 0 > /dev/null
+    fw ctl debug -buf "$DEBUG_BUFFER" $1 > /dev/null
 
-    if [[ "$IS_VSX" == *"1"* ]]; then
-        fw ctl debug -buf "$DEBUG_BUFFER" -v "$VSID_SCRIPT" > /dev/null
-
-        if [[ "$?" != "0" ]]; then
-            kernel_memory_used
-            clean_up
-            exit 1
-        fi
-
-        if [[ "$MORE_DEBUG_FLAGS" != "1" ]]; then
-            fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl > /dev/null
-            fw ctl debug -v "$VSID_SCRIPT" -m kiss + salloc > /dev/null
-
-            echo_log "\\nRunning:"
-            echo_log "fw ctl debug 0"
-            echo_log "fw ctl debug -buf $DEBUG_BUFFER -v $VSID_SCRIPT"
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m fw + filter ioctl"
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + salloc"
-        else
-            fw ctl debug -v "$VSID_SCRIPT" -m fw + filter ioctl cmi > /dev/null
-
-            if [[ "$MAJOR_VERSION" == "R80" ]]; then
-                fw ctl debug -v "$VSID_SCRIPT" -m UP + error warning > /dev/null
-            fi
-
-            fw ctl debug -v "$VSID_SCRIPT" -m WS + error warning > /dev/null
-            fw ctl debug -v "$VSID_SCRIPT" -m cmi_loader + error warning policy info > /dev/null
-            fw ctl debug -v "$VSID_SCRIPT" -m kiss + error warning htab ghtab mtctx salloc pm > /dev/null
-
-            echo_log "\\nRunning:"
-            echo_log "fw ctl debug 0"
-            echo_log "fw ctl debug -buf $DEBUG_BUFFER -v $VSID_SCRIPT"
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m fw + filter ioctl cmi"
-
-            if [[ "$MAJOR_VERSION" == "R80" ]]; then
-                echo_log "fw ctl debug -v $VSID_SCRIPT -m UP + error warning"
-            fi
-
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m WS + error warning"
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m cmi_loader + error warning policy info"
-            echo_log "fw ctl debug -v $VSID_SCRIPT -m kiss + error warning htab ghtab mtctx salloc pm"
-        fi
-
-        fw ctl kdebug -v "$VSID_SCRIPT" -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug_VS"$VSID_SCRIPT".txt &
-
-        echo_log "fw ctl kdebug -v $VSID_SCRIPT -T -f &> kernel_atomic_debug_VS$VSID_SCRIPT.txt"
-        echo_log "\\nexport TDERROR_ALL_ALL=5"
-        echo_log "fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> fetch_local_debug_VS$VSID_SCRIPT.txt"
-
-        $ECHO -n "Fetching local policy   "
-
-        $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-        cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-
-        export TDERROR_ALL_ALL=5
-        fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug_VS"$VSID_SCRIPT".txt &
-        progress_bar
-
-        $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-        cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-        $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-        grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
+    if [[ "$?" != "0" ]]; then
+        kernel_memory_used
+        clean_up
+        exit 1
     fi
 
-    if [[ "$IS_VSX" != *"1"* ]]; then
-        fw ctl debug -buf "$DEBUG_BUFFER" > /dev/null
+    if [[ "$MORE_DEBUG_FLAGS" != "1" ]]; then
+        fw ctl debug $1 -m fw + filter ioctl > /dev/null
+        fw ctl debug $1 -m kiss + salloc > /dev/null
 
-        if [[ "$?" != "0" ]]; then
-            kernel_memory_used
-            clean_up
-            exit 1
+        echo_log "\\nRunning:"
+        echo_log "fw ctl debug 0"
+        echo_log "fw ctl debug -buf $DEBUG_BUFFER $1"
+        echo_log "fw ctl debug $1 -m fw + filter ioctl"
+        echo_log "fw ctl debug $1 -m kiss + salloc"
+    else
+        fw ctl debug $1 -m fw + filter ioctl cmi > /dev/null
+
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            fw ctl debug $1 -m UP + error warning > /dev/null
         fi
 
-        if [[ "$MORE_DEBUG_FLAGS" != "1" ]]; then
-            fw ctl debug -m fw + filter ioctl > /dev/null
-            fw ctl debug -m kiss + salloc > /dev/null
+        fw ctl debug $1 -m WS + error warning > /dev/null
+        fw ctl debug $1 -m cmi_loader + error warning policy info > /dev/null
+        fw ctl debug $1 -m kiss + error warning htab ghtab mtctx salloc pm > /dev/null
 
-            echo_log "\\nRunning:"
-            echo_log "fw ctl debug 0"
-            echo_log "fw ctl debug -buf $DEBUG_BUFFER"
-            echo_log "fw ctl debug -m fw + filter ioctl"
-            echo_log "fw ctl debug -m kiss + salloc"
-        else
-            fw ctl debug -m fw + filter ioctl cmi > /dev/null
+        echo_log "\\nRunning:"
+        echo_log "fw ctl debug 0"
+        echo_log "fw ctl debug -buf $DEBUG_BUFFER $1"
+        echo_log "fw ctl debug $1 -m fw + filter ioctl cmi"
 
-            if [[ "$MAJOR_VERSION" == "R80" ]]; then
-                fw ctl debug -m UP + error warning > /dev/null
-            fi
-
-            fw ctl debug -m WS + error warning > /dev/null
-            fw ctl debug -m cmi_loader + error warning policy info > /dev/null
-            fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm > /dev/null
-
-            echo_log "\\nRunning:"
-            echo_log "fw ctl debug 0"
-            echo_log "fw ctl debug -buf $DEBUG_BUFFER"
-            echo_log "fw ctl debug -m fw + filter ioctl cmi"
-
-            if [[ "$MAJOR_VERSION" == "R80" ]]; then
-                echo_log "fw ctl debug -m UP + error warning"
-            fi
-
-            echo_log "fw ctl debug -m WS + error warning"
-            echo_log "fw ctl debug -m cmi_loader + error warning policy info"
-            echo_log "fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm"
+        if [[ "$MAJOR_VERSION" == "R80" ]]; then
+            echo_log "fw ctl debug $1 -m UP + error warning"
         fi
 
-        fw ctl kdebug -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug.txt &
-
-        echo_log "fw ctl kdebug -T -f &> kernel_atomic_debug.txt"
-        echo_log "\\nexport TDERROR_ALL_ALL=5"
-        echo_log "fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> fetch_local_debug.txt"
-
-        $ECHO -n "Fetching local policy   "
-
-        if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-            $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-            cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-
-            export TDERROR_ALL_ALL=5
-            fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
-            progress_bar
-
-            $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-            cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-            $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-            grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
-        else
-            export TDERROR_ALL_ALL=5
-            fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
-            progress_bar
-        fi
+        echo_log "fw ctl debug $1 -m WS + error warning"
+        echo_log "fw ctl debug $1 -m cmi_loader + error warning policy info"
+        echo_log "fw ctl debug $1 -m kiss + error warning htab ghtab mtctx salloc pm"
     fi
+
+    fw ctl kdebug $1 -T -f &> "$DBGDIR_FILES"/kernel_atomic_debug.txt &
+
+    echo_log "fw ctl kdebug $1 -T -f &> kernel_atomic_debug.txt"
+    echo_log "\\nexport TDERROR_ALL_ALL=5"
+    echo_log "fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> fetch_local_debug.txt"
+
+    $ECHO -n "Fetching local policy   "
+
+    $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+
+    export TDERROR_ALL_ALL=5
+    fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
+    progress_bar
+
+    $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
 }
 
 ###############################################################################
@@ -1453,15 +1380,25 @@ main()
         fi
         debug_mgmt_all
 
-    # FW
+    # 61k/41k and VSX
+    elif [[ "$IS_61K" != "Failed to find the value" && "$IS_VSX" == *"1"* ]]; then
+        verify_61k
+        verify_vsx
+        verify_buffer
+        debug_fw "-v $VSID_SCRIPT"
+
+    # 61k/41k and not VSX
     elif [[ "$IS_61K" != "Failed to find the value" ]]; then
         verify_61k
         debug_fw_all
 
+    # VSX
     elif [[ "$IS_VSX" == *"1"* ]]; then
         verify_vsx
-        debug_fw_all
+        verify_buffer
+        debug_fw "-v $VSID_SCRIPT"
 
+    # FW
     elif [[ "$IS_FW" == *"1"* ]]; then
         echo_shell_log "\\nThis is a Security Gateway"
         debug_fw_all
