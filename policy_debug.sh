@@ -21,7 +21,7 @@ Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Policy Installation Debug Script
-Version 3.5 BETA
+Version 3.5 May 17, 2017
 "
 
 OPTIND=1
@@ -1274,31 +1274,31 @@ collect_files()
 
     if [[ "$MAJOR_VERSION" == "R80" ]]; then
         if [[ "$IS_MDS" == "1" ]]; then
-            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
             cp -p $MDS_TEMPLATE/log/cpm.elg* "$DBGDIR_FILES"
             cp -p $MDS_TEMPLATE/log/install_policy.elg* "$DBGDIR_FILES"
             mdsenv "$CMA_NAME"
             cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2>&1
+            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2> /dev/null
         elif [[ "$IS_MGMT" == *"1"* ]]; then
             cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
             cp -p $FWDIR/log/cpm.elg* "$DBGDIR_FILES"
             cp -p $FWDIR/log/install_policy.elg* "$DBGDIR_FILES"
-            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2>&1
+            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2> /dev/null
         fi
     else
         if [[ "$IS_MDS" == "1" ]]; then
             cp -p $MDSDIR/conf/mdsdb/customers.C* "$DBGDIR_FILES"
-            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
             mdsenv "$CMA_NAME"
             cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/rulebases_5_0.fws* "$DBGDIR_FILES"
         elif [[ "$IS_MGMT" == *"1"* ]]; then
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
             cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
             cp -p $FWDIR/conf/rulebases_5_0.fws* "$DBGDIR_FILES"

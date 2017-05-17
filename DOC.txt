@@ -6,14 +6,14 @@ This script will debug Policy Installation.
 It will also gather basic information from the machine (disk space,
 free memory, running processes, hotfixes, etc.) and other files relevant.
 
-The script will save the debugs to /tmp/policy-debug if the root partition
-has 2GB of space or more. Otherwise if will save it to /var/log/policy-debug
-if it has 2GB of space or more. There is a also a function that will monitor
-the disk space of the partition used. If the free space gets less than 500MB
-the debugs will stop and will be deleted.
-
 When the script is finished running, all the files will be compressed
 and will then print the location of the tgz.
+
+The script will save the debugs to /tmp/policy-debug if the root partition
+has 2GB of space or more. Otherwise, it will save it to /var/log/policy-debug
+if it has 2GB of space or more. There is a also a function that will monitor
+the disk space of the partition used. If the free space gets below 500MB,
+the debugs will stop and will be deleted.
 
 
 ###############################################################################
@@ -50,6 +50,9 @@ Note - Do NOT install policy from SmartConsole while the debug is running.
 5. The script will stop automatically when it is finished.
 6. Upload the tgz file using Check Point Uploader on sk108152.
 
+The script will detect if the server is a:
+Standalone, SmartCenter, MDS, Gateway, VSX, 61k/41k, SG80.
+Then, it will run the correct debug accordingly.
 
 ###############################################################################
 OPTIONAL FLAGS
@@ -88,7 +91,7 @@ See Gateway Debug Syntax section for flags enabled.
 
 The minimum disk space check will be disabled and all debug files will be
 written to /var/log/policy-debug or /logs/policy-debug if SG80.
-This option is not recommended to be enabled, but is available in case it is needed.
+This option is not recommended to be enabled, but is available in case.
 
 
 # ./policy_debug -v
@@ -149,8 +152,6 @@ fwm -d mds fwmconnect -assign -n 10 -g "##GLOBAL_POLICY_NAME" -l "CMA_NAME_._._D
 GATEWAY DEBUG SYNTAX
 ###############################################################################
 
-If the Gateway is VSX, the debug flags will be enabled on the relevant VS.
-
 fw ctl debug -m fw + filter ioctl
 fw ctl debug -m kiss + salloc
 fw ctl kdebug -T -f &> kernel_atomic_debug.txt
@@ -158,6 +159,7 @@ fw ctl kdebug -T -f &> kernel_atomic_debug.txt
 export TDERROR_ALL_ALL=5
 fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> fetch_local_debug.txt
 
+If the Gateway is VSX, the debug flags will be enabled on the selected VS.
 If this script is run with the "-f" flag, the below kernel flags are enabled.
 These additional flags will use more CPU and memory to run.
 This may cause some loaded Gateways to stop responding or crash.
