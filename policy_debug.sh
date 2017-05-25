@@ -21,7 +21,7 @@ Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Policy Installation Debug Script
-Version 3.5 May 17, 2017
+Version 3.5.1 May 25, 2017
 "
 
 OPTIND=1
@@ -209,7 +209,7 @@ if [[ "$IS_SG80" == "Failed to find the value" ]]; then
         while true; do
             DISKCHECK=$(df -P $DBGDIR | grep / | awk '{print $4}')
             if [[ "$DISKCHECK" -lt "500000" ]]; then
-                $ECHO -n "\\n\\nError: Disk space is less than 500MB. Stopping debug..."
+                $ECHO -n "\\n\\nError: Disk space is now less than 500MB. Stopping debug..."
                 kill -15 $$
             fi
         sleep 20
@@ -874,7 +874,14 @@ debug_mgmt()
             gateway_detect "2"
             starting_mgmt_debug
 
-            export_tderror_debug
+            # Threat Prevention debug requires export_all to see the problem
+            echo_log "\\nRunning"
+            echo_log "export TDERROR_ALL_ALL=5"
+            export TDERROR_ALL_ALL=5
+            if [[ "$MAJOR_VERSION" == "R80" ]]; then
+                echo_log "export INTERNAL_POLICY_LOADING=1"
+                export INTERNAL_POLICY_LOADING=1
+            fi
             echo_log "fwm -d load -p threatprevention $POLICY_NAME $GATEWAY_NAME &> threat_prevention_policy_install_debug.txt"
 
             $ECHO -n "Installing Threat Prevention Policy $POLICY_NAME to $GATEWAY_NAME   "
@@ -1066,7 +1073,11 @@ stop_debug()
     $ECHO "Turning debug off..."
 
     unset TDERROR_ALL_ALL
-    unset TDERROR_ALL_PLCY_INST_TIMING
+
+    if [[ "$IS_MGMT" == *"1"* ]]; then
+        unset TDERROR_ALL_PLCY_INST_TIMING
+        unset INTERNAL_POLICY_LOADING
+    fi
 
     if [[ "$IS_FW" == *"1"* ]]; then
         fw ctl debug 0 > /dev/null
