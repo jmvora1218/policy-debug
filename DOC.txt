@@ -9,12 +9,6 @@ free memory, running processes, hotfixes, etc.) and other files relevant.
 When the script is finished running, all the files will be compressed
 and will then print the location of the tgz.
 
-The script will save the debugs to /tmp/policy-debug if the root partition
-has 2GB of space or more. Otherwise, it will save it to /var/log/policy-debug
-if it has 2GB of space or more. There is a also a function that will monitor
-the disk space of the partition used. If the free space gets below 500MB,
-the debugs will stop and will be deleted.
-
 
 ###############################################################################
 SUPPORTED VERSIONS
@@ -172,3 +166,44 @@ fw ctl debug -m kiss + error warning htab ghtab mtctx salloc pm
 
 If the Gateway is R80.10 or higher, this flag is enabled.
 fw ctl debug -m UP + error warning
+
+
+###############################################################################
+FAQ
+###############################################################################
+
+Q: Where will the debugs be saved?
+
+A: The script will save the debugs to /tmp/policy-debug if the root partition
+has 2GB of space or more. Otherwise, it will save it to /var/log/policy-debug
+if it has 2GB of space or more. If neither partitions have enough disk space,
+the script will give an error saying no disk space available.
+If the script is run on an 1100, 1400, or other SG80's, the debugs will be
+saved in /logs/policy-debug if there is 10MB of space or more. Otherwise, it
+will be saved in /storage/tmp/policy-debug if there is 10MB of space or more.
+
+
+Q: There was an error about not enough disk space while running the debugs and
+it stopped the debug and deleted the debug files. Why?
+
+A: There is a function that will monitor the disk space of the partition used.
+If the free space gets below 500MB, the debugs will stop and will be deleted.
+This is to prevent file system corruption on the server.
+
+
+Q: I am trying to debug a Gateway with Threat Prevention, QoS, or
+Desktop Security enabled. The script gives an error,
+"There are no Gateways detected", an exits. Why?
+
+A: The script queries the database by running, "queryDB_util" on that Gateway
+to check first if the relevant blade is enabled. If the relevant blade is not
+enabled on any Gateways, the script will display an error and exit.
+
+
+Q: There was an error about FW Kernel memory while running this script on
+a Gateway and the script exited. Why?
+
+A: The script checks if allocating the kernel debug buffer was successful.
+If this failed, the script will display this error and exit. The reason
+the kernel debug buffer failed, is because there is too much traffic and
+too many blades enabled on the Gateway and not enough RAM to handle it all.
