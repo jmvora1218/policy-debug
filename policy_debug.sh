@@ -21,7 +21,7 @@ Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Policy Installation Debug Script
-Version 3.5.1 May 25, 2017
+Version 3.5.2 June 2, 2017
 "
 
 OPTIND=1
@@ -221,7 +221,6 @@ fi
 ###############################################################################
 # START SCRIPT SESSION LOG
 ###############################################################################
-GENERAL_LOG="$DBGDIR_FILES"/general.txt
 SESSION_LOG="$DBGDIR_FILES"/session.log
 START_DATE=$(/bin/date "+%d %b %Y %H:%M:%S %z")
 
@@ -251,58 +250,56 @@ fi
 ###############################################################################
 change_to_cma()
 {
-    if [[ "$IS_MDS" == "1" ]]; then
-        echo_shell_log "\\nThis is a Multi-Domain Management Server"
-        echo_shell_log "\\n--------DOMAINS DETECTED--------\\n"
+    echo_shell_log "\\nThis is a Multi-Domain Management Server"
+    echo_shell_log "\\n--------DOMAINS DETECTED--------\\n"
 
-        OBJECT_ARRAY=($($MDSVERUTIL AllCMAs | sort | tee -a "$SESSION_LOG"))
-        display_objects "Domains"
+    OBJECT_ARRAY=($($MDSVERUTIL AllCMAs | sort | tee -a "$SESSION_LOG"))
+    display_objects "Domains"
 
-        while true; do
-            $ECHO "\\nWhat is the number of the Domain you want to debug?"
-            $ECHO -n "(1-${OBJECT_ARRAY_NUMBER_OPTION}): "
-            read CMA_NUMBER
+    while true; do
+        $ECHO "\\nWhat is the number of the Domain you want to debug?"
+        $ECHO -n "(1-${OBJECT_ARRAY_NUMBER_OPTION}): "
+        read CMA_NUMBER
 
-            case "$CMA_NUMBER" in
-                [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
-                    CMA_NAME="${OBJECT_ARRAY[$((CMA_NUMBER-1))]}"
-                    CMA_NAME_EXIST=$($MDSVERUTIL AllCMAs | grep ^"$CMA_NAME"$)
-                    ;;
-                *)
-                    not_valid
-                    continue ;;
-            esac
+        case "$CMA_NUMBER" in
+            [1-9]|[1-9][0-9]|[1-9][0-9][0-9])
+                CMA_NAME="${OBJECT_ARRAY[$((CMA_NUMBER-1))]}"
+                CMA_NAME_EXIST=$($MDSVERUTIL AllCMAs | grep ^"$CMA_NAME"$)
+                ;;
+            *)
+                not_valid
+                continue ;;
+        esac
 
-            case "$CMA_NAME" in
-                "")
-                    not_valid
-                    continue ;;
+        case "$CMA_NAME" in
+            "")
+                not_valid
+                continue ;;
 
-                "$CMA_NAME_EXIST")
-                    CMA_IP=$($MDSVERUTIL CMAIp -n $CMA_NAME)
-                    if [[ "$?" != "0" ]]; then
-                        $ECHO "\\nError: There is no Domain Management Server with Name: $CMA_NAME"
-                        $ECHO "Run the script again and specify a valid Domain\\n"
-                        clean_up
-                        exit 1
-                    fi
+            "$CMA_NAME_EXIST")
+                CMA_IP=$($MDSVERUTIL CMAIp -n $CMA_NAME)
+                if [[ "$?" != "0" ]]; then
+                    $ECHO "\\nError: There is no Domain Management Server with Name: $CMA_NAME"
+                    $ECHO "Run the script again and specify a valid Domain\\n"
+                    clean_up
+                    exit 1
+                fi
 
-                    mdsenv "$CMA_NAME"
-                    DOMAIN_NAME=$($CPDIR/bin/cpprod_util CPPROD_GetValue FW1 CustomerName 1)
-                    if [[ -z "$DOMAIN_NAME" ]]; then
-                        $ECHO "\\nError: Failed to retrieve Domain name"
-                        $ECHO "Consider running this script again with verbose output\\n"
-                        clean_up
-                        exit 1
-                    fi
+                mdsenv "$CMA_NAME"
+                DOMAIN_NAME=$($CPDIR/bin/cpprod_util CPPROD_GetValue FW1 CustomerName 1)
+                if [[ -z "$DOMAIN_NAME" ]]; then
+                    $ECHO "\\nError: Failed to retrieve Domain name"
+                    $ECHO "Consider running this script again with verbose output\\n"
+                    clean_up
+                    exit 1
+                fi
 
-                    echo_log "\\nSelected CMA: $CMA_NAME"
-                    echo_log "Domain: $DOMAIN_NAME"
-                    echo_shell_log ""
-                    break ;;
-            esac
-        done
-    fi
+                echo_log "\\nSelected CMA: $CMA_NAME"
+                echo_log "Domain: $DOMAIN_NAME"
+                echo_shell_log ""
+                break ;;
+        esac
+    done
 }
 
 ###############################################################################
@@ -405,11 +402,12 @@ verify_buffer()
 
                     VMALLOC_TOTAL=$(cat /proc/meminfo | grep "VmallocTotal" | awk '{ print $2 }')
                     VMALLOC_USED=$(cat /proc/meminfo | grep "VmallocUsed" | awk '{ print $2 }')
+                    VMALLOC_CHUNK=$(cat /proc/meminfo | grep "VmallocChunk" | awk '{ print $2 }')
                     VMALLOC_FREE=$(( $VMALLOC_TOTAL - $VMALLOC_USED ))
 
-                    if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )); then
+                    if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )) || (( "$VMALLOC_CHUNK" < "$DEBUG_BUFFER" )); then
                         $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
-                        $ECHO "Available buffer: $VMALLOC_FREE"
+                        $ECHO "Available buffer: $VMALLOC_FREE kB"
                         $ECHO "Please define a smaller kernel debug buffer"
                         $ECHO "Or follow sk84700 to increase the Vmalloc"
                         $ECHO "Press CTRL-C to exit the script if needed"
@@ -431,11 +429,12 @@ verify_buffer()
         DEBUG_BUFFER=32000
         VMALLOC_TOTAL=$(cat /proc/meminfo | grep "VmallocTotal" | awk '{ print $2 }')
         VMALLOC_USED=$(cat /proc/meminfo | grep "VmallocUsed" | awk '{ print $2 }')
+        VMALLOC_CHUNK=$(cat /proc/meminfo | grep "VmallocChunk" | awk '{ print $2 }')
         VMALLOC_FREE=$(( $VMALLOC_TOTAL - $VMALLOC_USED ))
 
-        if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )); then
+        if (( "$VMALLOC_FREE" < "$DEBUG_BUFFER" )) || (( "$VMALLOC_CHUNK" < "$DEBUG_BUFFER" )); then
             $ECHO "\\nError: Not enough kernel debug buffer free to allocate $DEBUG_BUFFER"
-            $ECHO "Available buffer: $VMALLOC_FREE"
+            $ECHO "Available buffer: $VMALLOC_CHUNK kB"
             $ECHO "Follow sk84700 to increase the Vmalloc"
             $ECHO "Or run this script again and define a smaller buffer"
             $ECHO "./$SCRIPT_NAME -b\\n"
@@ -447,12 +446,8 @@ verify_buffer()
 
 kernel_memory_used()
 {
-    MEMORY_USED=$(fw ctl pstat | grep "Memory used")
     $ECHO "\\nError: Failed to allocate kernel debug buffer of $DEBUG_BUFFER"
-    $ECHO "FW Kernel memory usage is high"
-    $ECHO "$MEMORY_USED\\n"
-    $ECHO "Policy Installation is failing because there is not enough memory"
-    $ECHO "Follow sk101875 Scenario 2 or add more RAM to this Gateway\\n"
+    $ECHO "Follow sk101875 Scenario 2 or sk84700 to increase the Vmalloc\\n"
 }
 
 ###############################################################################
@@ -668,7 +663,6 @@ global_policy_detect()
 
 mgmt_detect()
 {
-    # $ECHO "\\nWhat is the number of the Management you want to Install Database to?"
     echo_shell_log "\\n\\n--------MANAGEMENTS DETECTED--------\\n"
 
     if [[ "$IS_MDS" == "1" ]]; then
@@ -998,6 +992,10 @@ debug_mgmt()
 debug_fw()
 {
     starting_fw_debug
+
+    $ECHO "Vmalloc before enabling kernel debug flags:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" $1 > /dev/null
 
@@ -1049,17 +1047,15 @@ debug_fw()
 
     $ECHO -n "Fetching local policy   "
 
-    $ECHO "Vmalloc before install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "\\n\\nVmalloc before policy install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
     cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
 
     export TDERROR_ALL_ALL=5
     fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
     progress_bar
 
-    $ECHO "\\n\\nVmalloc after install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "\\n\\nVmalloc after policy install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
     cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
-    $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
 }
 
 ###############################################################################
@@ -1081,6 +1077,14 @@ stop_debug()
 
     if [[ "$IS_FW" == *"1"* ]]; then
         fw ctl debug 0 > /dev/null
+
+        if [[ -e ${DBGDIR_FILES}/vmalloc.txt ]]; then
+            $ECHO "\\n\\nVmalloc after disabling kernel debug flags:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+            cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+
+            $ECHO "\\n\\nVmalloc in /boot/grub/grub.conf:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
+            grep 'vmalloc' /boot/grub/grub.conf >> "$DBGDIR_FILES"/vmalloc.txt
+        fi
     fi
 
     if [[ "QUESTION" == "5" ]]; then
@@ -1097,230 +1101,244 @@ stop_debug()
 ###############################################################################
 # COLLECT GENERAL INFO AND FILES
 ###############################################################################
-section_general_log()
+MINI_CPINFO="$DBGDIR_FILES"/mini_cpinfo.txt
+OTHER_FILES="$DBGDIR_FILES"/other_files
+mkdir -p "$OTHER_FILES"
+
+section_mini_cpinfo()
 {
     SEP="***********************"
-    $ECHO "\\n" >> "$GENERAL_LOG"
-    $ECHO "$SEP $1 $SEP" >> "$GENERAL_LOG"
+    $ECHO "\\n" >> "$MINI_CPINFO"
+    $ECHO "$SEP $1 $SEP" >> "$MINI_CPINFO"
 }
 
-section_files_log()
+section_mini_cpinfo_break()
 {
-    SEP="***********************"
-    $ECHO "$SEP $1 $SEP\\n" >> "$2"
+    SEP="======================================================================"
+    $ECHO "\\n\\n" >> "$MINI_CPINFO"
+    $ECHO "$SEP" >> "$MINI_CPINFO"
+    $ECHO "$1" >> "$MINI_CPINFO"
+    $ECHO "$SEP" >> "$MINI_CPINFO"
 }
 
 collect_files()
 {
     $ECHO "Copying files..."
 
-    # GENERAL LOG
+    # MINI CPINFO
+
+    section_mini_cpinfo_break "VERSION INFORMATION"
 
     if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-        section_general_log "MACHINE DETAILS (clish -c \"show asset all\")"
+        section_mini_cpinfo "MACHINE DETAILS (clish -c \"show asset all\")"
         if [[ -f "/bin/clish" ]]; then
             clish -c "lock database override" &> /dev/null
-            clish -c "show asset all" >> "$GENERAL_LOG" 2>&1
+            clish -c "show asset all" >> "$MINI_CPINFO" 2>&1
         else
-            $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
-            $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
+            $ECHO "/bin/clish does not exist" >> "$MINI_CPINFO"
+            $ECHO "This Operating System is not Gaia" >> "$MINI_CPINFO"
         fi
 
-        section_general_log "VERSION (clish -c \"show version all\")"
+        section_mini_cpinfo "VERSION (clish -c \"show version all\")"
         if [[ -f "/bin/clish" ]]; then
             clish -c "lock database override" &> /dev/null
-            clish -c "show version all" >> "$GENERAL_LOG" 2>&1
+            clish -c "show version all" >> "$MINI_CPINFO" 2>&1
         else
-            $ECHO "/bin/clish does not exist" >> "$GENERAL_LOG"
-            $ECHO "This Operating System is not Gaia" >> "$GENERAL_LOG"
+            $ECHO "/bin/clish does not exist" >> "$MINI_CPINFO"
+            $ECHO "This Operating System is not Gaia" >> "$MINI_CPINFO"
         fi
     else
-        section_general_log "VERSION (ver)"
-        ver >> "$GENERAL_LOG"
+        section_mini_cpinfo "VERSION (ver)"
+        ver >> "$MINI_CPINFO"
     fi
 
-    section_general_log "SYSTEM INFO (uname -a)"
-    uname -a >> "$GENERAL_LOG"
+    section_mini_cpinfo "SYSTEM INFO (uname -a)"
+    uname -a >> "$MINI_CPINFO"
 
-    section_general_log "CPU (cat /proc/cpuinfo | egrep \"^processor|^Processor\" | wc -l)"
-    $ECHO -n "Total CPU: " >> "$GENERAL_LOG"
-    cat /proc/cpuinfo | egrep "^processor|^Processor" | wc -l >> "$GENERAL_LOG"
+    section_mini_cpinfo "(cpstat os -f all)"
+    cpstat os -f all >> "$MINI_CPINFO"
+
+
+
+    section_mini_cpinfo_break "SYSTEM INFORMATION"
+
+    section_mini_cpinfo "CPU (cat /proc/cpuinfo | egrep \"^processor|^Processor\" | wc -l)"
+    $ECHO -n "Total CPU: " >> "$MINI_CPINFO"
+    cat /proc/cpuinfo | egrep "^processor|^Processor" | wc -l >> "$MINI_CPINFO"
 
     if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-        section_general_log "MEMORY (free -m -t)"
-        free -m -t >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "MEMORY (free -m -t)"
+        free -m -t >> "$MINI_CPINFO" 2>&1
 
-        section_general_log "DISK SPACE (df -haT)"
-        df -haT >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "DISK SPACE (df -haT)"
+        df -haT >> "$MINI_CPINFO" 2>&1
 
-        section_general_log "TOP (top -bn1 -p 0 | head -5)"
-        top -bn1 -p 0 2>&1 | head -5 >> "$GENERAL_LOG"
+        section_mini_cpinfo "TOP (top -bn1 -p 0 | head -5)"
+        top -bn1 -p 0 2>&1 | head -5 >> "$MINI_CPINFO"
     else
-        section_general_log "MEMORY (free)"
-        free >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "MEMORY (free)"
+        free >> "$MINI_CPINFO" 2>&1
 
-        section_general_log "DISK SPACE (df -h)"
-        df -h >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "DISK SPACE (df -h)"
+        df -h >> "$MINI_CPINFO" 2>&1
 
-        section_general_log "TOP (top -n1 | head -5)"
-        top -n1 2>&1 | head -5 >> "$GENERAL_LOG"
+        section_mini_cpinfo "TOP (top -n1 | head -5)"
+        top -n1 2>&1 | head -5 >> "$MINI_CPINFO"
     fi
 
-    section_general_log "TIME (hwclock and ntpstat)"
-    hwclock >> "$GENERAL_LOG"
-    ntpstat >> "$GENERAL_LOG" 2>&1
+    section_mini_cpinfo "UPTIME (uptime)"
+    uptime >> "$MINI_CPINFO"
+
+    section_mini_cpinfo "TIME (hwclock and ntpstat)"
+    hwclock >> "$MINI_CPINFO"
+    ntpstat >> "$MINI_CPINFO" 2>&1
 
     if [[ "$IS_FW" == *"1"* ]]; then
         if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-            section_general_log "ENABLED BLADES (enabled_blades)"
-            enabled_blades >> "$GENERAL_LOG" 2>&1
+            section_mini_cpinfo "ENABLED BLADES (enabled_blades)"
+            enabled_blades >> "$MINI_CPINFO" 2>&1
         fi
 
-        section_general_log "IPS STATUS (ips stat)"
-        ips stat >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "IPS STATUS (ips stat)"
+        ips stat >> "$MINI_CPINFO" 2>&1
 
-        section_general_log "STRING_DICTIONARY_TABLE SIZE (fw tab -t string_dictionary_table -s)"
-        fw tab -t string_dictionary_table -s >> "$GENERAL_LOG"
+        section_mini_cpinfo "(fw ctl pstat)"
+        fw ctl pstat >> "$MINI_CPINFO"
 
-        section_general_log "STRING_DICTIONARY_TABLE LIMIT (fw tab -t string_dictionary_table | grep limit)"
-        fw tab -t string_dictionary_table | grep limit >> "$GENERAL_LOG"
+        section_mini_cpinfo "(cpstat ha -f all)"
+        cpstat ha -f all >> "$MINI_CPINFO" 2>&1
     fi
 
+    section_mini_cpinfo_break "PROCESSES"
+
+    section_mini_cpinfo "WATCHDOG (cpwd_admin list)"
+    cpwd_admin list >> "$MINI_CPINFO"
+
+    section_mini_cpinfo "(ps auxww)"
+    ps auxww >> "$MINI_CPINFO"
+
+    section_mini_cpinfo_break "INTERFACES AND ROUTING"
+
+    section_mini_cpinfo "(ifconfig -a)"
+    ifconfig -a >> "$MINI_CPINFO"
+
+    section_mini_cpinfo "(arp -nv)"
+    arp -nv >> "$MINI_CPINFO"
+
+    section_mini_cpinfo "(netstat -i)"
+    netstat -i >> "$MINI_CPINFO"
+
+    section_mini_cpinfo "(netstat -rn)"
+    netstat -rn >> "$MINI_CPINFO"
+
     if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-        section_general_log "CORE DUMPS"
-        $ECHO "/var/crash" >> "$GENERAL_LOG"
-        ls -lhA /var/crash >> "$GENERAL_LOG" 2>&1
-        $ECHO "/var/log/crash" >> "$GENERAL_LOG"
-        ls -lhA /var/log/crash >> "$GENERAL_LOG" 2>&1
-        $ECHO "/var/log/dump/usermode" >> "$GENERAL_LOG"
-        ls -lhA /var/log/dump/usermode >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "(netstat -anp)"
+        netstat -anp >> "$MINI_CPINFO"
     else
-        section_general_log "CORE DUMPS (ls -lhA /logs/core)"
-        ls -lhA /logs/core >> "$GENERAL_LOG" 2>&1
+        section_mini_cpinfo "(netstat -an)"
+        netstat -an >> "$MINI_CPINFO"
     fi
 
-    section_general_log "WATCHDOG (cpwd_admin list)"
-    cpwd_admin list >> "$GENERAL_LOG"
-
-    section_general_log "LICENSES (cplic print -x)"
-    cplic print -x >> "$GENERAL_LOG" 2>&1
+    section_mini_cpinfo_break "OTHER INFORMATIONIN"
 
     if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-        section_general_log "HOTFIXES (cpinfo -y all)"
+        section_mini_cpinfo "CORE DUMPS"
+        $ECHO "/var/crash" >> "$MINI_CPINFO"
+        ls -lhA /var/crash >> "$MINI_CPINFO" 2>&1
+        $ECHO "/var/log/crash" >> "$MINI_CPINFO"
+        ls -lhA /var/log/crash >> "$MINI_CPINFO" 2>&1
+        $ECHO "/var/log/dump/usermode" >> "$MINI_CPINFO"
+        ls -lhA /var/log/dump/usermode >> "$MINI_CPINFO" 2>&1
+    else
+        section_mini_cpinfo "CORE DUMPS (ls -lhA /logs/core)"
+        ls -lhA /logs/core >> "$MINI_CPINFO" 2>&1
+    fi
+
+    section_mini_cpinfo "LICENSES (cplic print -x)"
+    cplic print -x >> "$MINI_CPINFO" 2>&1
+
+    section_mini_cpinfo_break "HOTFIXES INSTALLED"
+
+    if [[ "$IS_SG80" == "Failed to find the value" ]]; then
+        section_mini_cpinfo "HOTFIXES (cpinfo -y all)"
         if [[ "$IS_MDS" == "1" ]]; then
             mdsenv
-            script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
+            script -q -c 'cpinfo -y all' /dev/null >> "$MINI_CPINFO" 2>&1
         elif [[ "$IS_VSX" == *"1"* ]]; then
             vsenv > /dev/null
-            script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
+            script -q -c 'cpinfo -y all' /dev/null >> "$MINI_CPINFO" 2>&1
             vsenv "$VSID_SCRIPT" > /dev/null
-        elif [[ "$IS_FW" == *"1"* ]]; then
-            script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2>&1
         else
-            script -q -c 'cpinfo -y all' /dev/null >> "$GENERAL_LOG" 2>&1
+            script -q -c 'cpinfo -y all' /dev/null >> "$MINI_CPINFO" 2>&1
         fi
 
-        section_general_log "JUMBO HOTFIX TAKE (installed_jumbo_take)"
+        section_mini_cpinfo "JUMBO HOTFIX TAKE (installed_jumbo_take)"
         if [[ "$IS_MDS" == "1" ]]; then
             if [[ -e $MDS_TEMPLATE/bin/installed_jumbo_take ]]; then
-                installed_jumbo_take >> "$GENERAL_LOG"
+                installed_jumbo_take >> "$MINI_CPINFO"
             else
-                $ECHO "Jumbo Hotfix Accumulator is not installed" >> "$GENERAL_LOG"
+                $ECHO "\$MDS_TEMPLATE/bin/installed_jumbo_take does not exist" >> "$MINI_CPINFO"
             fi
         else
             if [[ -e $FWDIR/bin/installed_jumbo_take ]]; then
-                installed_jumbo_take >> "$GENERAL_LOG"
+                installed_jumbo_take >> "$MINI_CPINFO"
             else
-                $ECHO "Jumbo Hotfix Accumulator is not installed" >> "$GENERAL_LOG"
+                $ECHO "\$FWDIR/bin/installed_jumbo_take does not exist" >> "$MINI_CPINFO"
             fi
         fi
     fi
 
     if [[ "$MAJOR_VERSION" == "R80" ]]; then
-        section_general_log "dleserver.jar BUILD NUMBER (cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar)"
-        cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$GENERAL_LOG"
+        section_mini_cpinfo "dleserver.jar BUILD NUMBER (cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar)"
+        cpvinfo $MDS_FWDIR/cpm-server/dleserver.jar >> "$MINI_CPINFO"
     fi
 
-    # FILES LOG
-
-    section_files_log "(cpstat os -f all)" "$DBGDIR_FILES/cpstatos.txt"
-    cpstat os -f all >> "$DBGDIR_FILES"/cpstatos.txt
+    # OTHER FILES
 
     if [[ "$IS_FW" == *"1"* ]]; then
-        section_files_log "(cpstat ha -f all)" "$DBGDIR_FILES/clusterxl.txt"
-        cpstat ha -f all >> "$DBGDIR_FILES"/clusterxl.txt 2>&1
-    fi
-
-    section_files_log "(ifconfig -a)" "$DBGDIR_FILES/ifconfig.txt"
-    ifconfig -a >> "$DBGDIR_FILES"/ifconfig.txt
-
-    section_files_log "(netstat -rn)" "$DBGDIR_FILES/routes.txt"
-    netstat -rn >> "$DBGDIR_FILES"/routes.txt
-
-    if [[ "$IS_SG80" == "Failed to find the value" ]]; then
-        section_files_log "(netstat -anp)" "$DBGDIR_FILES/sockets.txt"
-        netstat -anp >> "$DBGDIR_FILES"/sockets.txt
-    else
-        section_files_log "(netstat -an)" "$DBGDIR_FILES/sockets.txt"
-        netstat -an >> "$DBGDIR_FILES"/sockets.txt 2>&1
-    fi
-
-    section_files_log "(ps auxww)" "$DBGDIR_FILES/psauxww.txt"
-    ps auxww >> "$DBGDIR_FILES"/psauxww.txt
-
-    if [[ "$IS_FW" == *"1"* ]]; then
-        section_files_log "(fw ctl pstat)" "$DBGDIR_FILES/pstat.txt"
-        fw ctl pstat >> "$DBGDIR_FILES"/pstat.txt
-
         if [[ -f "$FWDIR/boot/modules/fwkern.conf" ]]; then
-            cp -p $FWDIR/boot/modules/fwkern.conf* "$DBGDIR_FILES"
+            cp -p $FWDIR/boot/modules/fwkern.conf* "$OTHER_FILES"
         fi
 
-        cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
+        cp -p $CPDIR/registry/HKLM_registry.data* "$OTHER_FILES"
     fi
 
-    cp -p /var/log/messages* "$DBGDIR_FILES"
+    cp -p /var/log/messages* "$OTHER_FILES"
 
     if [[ "$MAJOR_VERSION" == "R80" ]]; then
         if [[ "$IS_MDS" == "1" ]]; then
-            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
-            cp -p $MDS_TEMPLATE/log/cpm.elg* "$DBGDIR_FILES"
-            cp -p $MDS_TEMPLATE/log/install_policy.elg* "$DBGDIR_FILES"
+            cp -p $MDS_TEMPLATE/log/cpm.elg* "$OTHER_FILES"
+            cp -p $MDS_TEMPLATE/log/install_policy.elg* "$OTHER_FILES"
             mdsenv "$CMA_NAME"
-            cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2> /dev/null
+            cp -p $CPDIR/registry/HKLM_registry.data* "$OTHER_FILES"
+            cp -p $FWDIR/conf/objects_5_0.C* "$OTHER_FILES"
+            cp -p $FWDIR/tmp/fwm_load.state* "$OTHER_FILES" 2> /dev/null
         elif [[ "$IS_MGMT" == *"1"* ]]; then
-            cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
-            cp -p $FWDIR/log/cpm.elg* "$DBGDIR_FILES"
-            cp -p $FWDIR/log/install_policy.elg* "$DBGDIR_FILES"
-            cp -p $FWDIR/tmp/fwm_load.state* "$DBGDIR_FILES" 2> /dev/null
+            cp -p $CPDIR/registry/HKLM_registry.data* "$OTHER_FILES"
+            cp -p $FWDIR/conf/objects_5_0.C* "$OTHER_FILES"
+            cp -p $FWDIR/log/cpm.elg* "$OTHER_FILES"
+            cp -p $FWDIR/log/install_policy.elg* "$OTHER_FILES"
+            cp -p $FWDIR/tmp/fwm_load.state* "$OTHER_FILES" 2> /dev/null
         fi
     else
         if [[ "$IS_MDS" == "1" ]]; then
-            cp -p $MDSDIR/conf/mdsdb/customers.C* "$DBGDIR_FILES"
-            cp -p $MDS_CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
+            cp -p $MDSDIR/conf/mdsdb/customers.C* "$OTHER_FILES"
             mdsenv "$CMA_NAME"
-            cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/rulebases_5_0.fws* "$DBGDIR_FILES"
+            cp -p $CPDIR/registry/HKLM_registry.data* "$OTHER_FILES"
+            cp -p $FWDIR/conf/objects_5_0.C* "$OTHER_FILES"
+            cp -p $FWDIR/conf/rulebases_5_0.fws* "$OTHER_FILES"
         elif [[ "$IS_MGMT" == *"1"* ]]; then
-            cp -p $CPDIR/log/cpwd.elg* "$DBGDIR_FILES" 2> /dev/null
-            cp -p $CPDIR/registry/HKLM_registry.data* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/objects_5_0.C* "$DBGDIR_FILES"
-            cp -p $FWDIR/conf/rulebases_5_0.fws* "$DBGDIR_FILES"
+            cp -p $CPDIR/registry/HKLM_registry.data* "$OTHER_FILES"
+            cp -p $FWDIR/conf/objects_5_0.C* "$OTHER_FILES"
+            cp -p $FWDIR/conf/rulebases_5_0.fws* "$OTHER_FILES"
         fi
     fi
 
     if [[ "$QUESTION" == "5" ]]; then
         if [[ "$MAJOR_VERSION" != "R80" ]]; then
             mdsenv "$CMA_NAME"
-            cp -p $FWDIR/log/fwm.elg* "$DBGDIR_FILES"
-            cp -p $FWDIR/log/gpolicy.log* "$DBGDIR_FILES"
+            cp -p $FWDIR/log/fwm.elg* "$OTHER_FILES"
+            cp -p $FWDIR/log/gpolicy.log* "$OTHER_FILES"
         fi
     fi
 }
@@ -1343,11 +1361,13 @@ compress_files()
         $ECHO "\\nError: Failed to create archive"
         $ECHO "Consider running this script again with verbose output"
         $ECHO "./$SCRIPT_NAME -d\\n"
+
         if [[ "$IS_SG80" == "Failed to find the value" ]]; then
             clean_up
         else
             rm -rf "$DBGDIR_FILES"
         fi
+
         exit 1
     fi
 }
