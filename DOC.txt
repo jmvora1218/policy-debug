@@ -98,7 +98,7 @@ RELEVANT FILES:
 ###############################################################################
 
 session.log - script log showing any options chosen and debug syntax used.
-general.txt - basic information from the machine.
+mini_cpinfo.txt - basic information from the machine.
 
 
 ###############################################################################
@@ -207,3 +207,9 @@ A: The script checks if allocating the kernel debug buffer was successful.
 If this failed, the script will display this error and exit. The reason
 the kernel debug buffer failed, is because there is too much traffic and
 too many blades enabled on the Gateway and not enough RAM to handle it all.
+
+
+Q: Why are there random number at the end of the policy_debug directory?
+
+A: These numbers are randomly generated when the directory is created
+to prevent writing to an existing directory.
