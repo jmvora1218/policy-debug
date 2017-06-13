@@ -21,7 +21,7 @@ Usage: $0 [OPTIONS]
 
 HELP_VERSION="
 Policy Installation Debug Script
-Version 3.5.2 June 2, 2017
+Version 3.5.3 June 13, 2017
 "
 
 OPTIND=1
@@ -162,6 +162,9 @@ else
     mkdir -p "$DBGDIR_FILES"
 fi
 
+OTHER_FILES="$DBGDIR_FILES"/other_files
+mkdir -p "$OTHER_FILES"
+
 ###############################################################################
 # PROCESS CLEANUP AND TERMINATION SIGNALS
 ###############################################################################
@@ -207,9 +210,10 @@ if [[ "$IS_SG80" == "Failed to find the value" ]]; then
     disk_space_check()
     {
         while true; do
-            DISKCHECK=$(df -P $DBGDIR | grep / | awk '{print $4}')
+            DISKCHECK=$(df -P $DBGDIR | grep / | awk '{ print $4 }')
             if [[ "$DISKCHECK" -lt "500000" ]]; then
-                $ECHO -n "\\n\\nError: Disk space is now less than 500MB. Stopping debug..."
+                $ECHO "\\n\\nError: Disk space is now less than 500MB. Stopping debug...\\n"
+                df -h "$DBGDIR"
                 kill -15 $$
             fi
         sleep 20
@@ -459,7 +463,7 @@ debug_mgmt_or_fw()
     echo_shell_log "\\n--------DEBUGS AVAILABLE--------\\n"
 
     echo_shell_log "1. Management"
-    echo_shell_log "2. Gateway (load on module failed)\\n"
+    echo_shell_log "2. Gateway (load on module failed / installation failed on gateway)\\n"
 
     while true; do
         $ECHO "Which option do you want to debug?"
@@ -993,8 +997,8 @@ debug_fw()
 {
     starting_fw_debug
 
-    $ECHO "Vmalloc before enabling kernel debug flags:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "Vmalloc before enabling kernel debug flags:\\n" >> "$OTHER_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$OTHER_FILES"/vmalloc.txt
 
     fw ctl debug 0 > /dev/null
     fw ctl debug -buf "$DEBUG_BUFFER" $1 > /dev/null
@@ -1047,15 +1051,15 @@ debug_fw()
 
     $ECHO -n "Fetching local policy   "
 
-    $ECHO "\\n\\nVmalloc before policy install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "\\n\\nVmalloc after enabling kernel debug flags and before policy install:\\n" >> "$OTHER_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$OTHER_FILES"/vmalloc.txt
 
     export TDERROR_ALL_ALL=5
     fw -d fetchlocal -d $FWDIR/state/__tmp/FW1 &> "$DBGDIR_FILES"/fetch_local_debug.txt &
     progress_bar
 
-    $ECHO "\\n\\nVmalloc after policy install:\\n" >> "$DBGDIR_FILES"/vmalloc.txt
-    cat /proc/meminfo | grep Vmalloc >> "$DBGDIR_FILES"/vmalloc.txt
+    $ECHO "\\n\\nVmalloc after policy install:\\n" >> "$OTHER_FILES"/vmalloc.txt
+    cat /proc/meminfo | grep Vmalloc >> "$OTHER_FILES"/vmalloc.txt
 }
 
 ###############################################################################
@@ -1102,8 +1106,7 @@ stop_debug()
 # COLLECT GENERAL INFO AND FILES
 ###############################################################################
 MINI_CPINFO="$DBGDIR_FILES"/mini_cpinfo.txt
-OTHER_FILES="$DBGDIR_FILES"/other_files
-mkdir -p "$OTHER_FILES"
+
 
 section_mini_cpinfo()
 {
@@ -1306,6 +1309,8 @@ collect_files()
     cp -p /var/log/messages* "$OTHER_FILES"
 
     if [[ "$MAJOR_VERSION" == "R80" ]]; then
+        cp -p $FWDIR/state/__tmp/FW1/install_policy_report.txt "$OTHER_FILES" 2> /dev/null
+
         if [[ "$IS_MDS" == "1" ]]; then
             cp -p $MDS_TEMPLATE/log/cpm.elg* "$OTHER_FILES"
             cp -p $MDS_TEMPLATE/log/install_policy.elg* "$OTHER_FILES"
